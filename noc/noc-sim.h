@@ -64,6 +64,10 @@ struct SimResult
     uint32_t maxFrame = 0;
     std::vector<long> chanTx;       // số gói bắt đầu truyền trên từng kênh trong cửa sổ đo
     std::vector<int64_t> txStartNs; // thời điểm PhyTxBegin của tối đa 64 lần truyền đầu tiên
+    // U_đo lớn nhất = max_ch chanTx·16/measure (≤ 1 khi measure chia hết cho 16) và kênh đạt
+    // max (kênh có chỉ số nhỏ nhất nếu hòa); uMaxCh = −1 nếu không có kênh nào.
+    double uMax = 0.0;
+    int uMaxCh = -1;
 
     // Dự đoán từ bộ tính φ (cùng routeSet), đã chuẩn hóa: uniform chia N−1.
     std::vector<double> rhoHop;

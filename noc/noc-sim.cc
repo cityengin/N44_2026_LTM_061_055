@@ -257,6 +257,15 @@ RunSim(const SimConfig& cfg)
     const double denom = static_cast<double>(n) * static_cast<double>(cfg.measure);
     res.throughput = kPacketFlits * static_cast<double>(res.arrivedInWindow) / denom;
     res.offered = kPacketFlits * static_cast<double>(res.generated) / denom;
+    for (int ch = 0; ch < mesh.NumChannels(); ++ch)
+    {
+        const double u = static_cast<double>(res.chanTx[ch]) * kCyclesPerPacket / cfg.measure;
+        if (res.uMaxCh < 0 || u > res.uMax)
+        {
+            res.uMax = u;
+            res.uMaxCh = ch;
+        }
+    }
 
     Simulator::Destroy();
     return res;
@@ -305,6 +314,8 @@ FormatResult(const SimConfig& cfg, const SimResult& r)
            ",hops_avg=" + Fixed(r.hopsAvg) + ",throughput=" + Fixed(r.throughput) +
            ",offered=" + Fixed(r.offered) + ",phi_hop=" + Fixed(r.phiHop) +
            ",pir_max_hop=" + Fixed(pirMax) + ",pir_ratio=" + Fixed(cfg.pir / pirMax) +
+           ",u_max=" + Fixed(r.uMax) +
+           ",u_max_ch=" + (r.uMaxCh >= 0 ? Mesh(cfg.w, cfg.h).ChannelName(r.uMaxCh) : "none") +
            ",stop=" + std::to_string(r.stopNs);
 }
 

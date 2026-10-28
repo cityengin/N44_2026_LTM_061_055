@@ -95,6 +95,10 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
 - throughput = flit tới đích trong cửa sổ / (W·H·measure); offered = flit tạo trong cửa sổ / (W·H·measure).
   saturated=1 khi còn gói của cửa sổ chưa tới đích; lat_avg_lb tính cả các gói đó với
   latency = thời điểm dừng − thời điểm tạo (cận dưới).
+  saturated=0 KHÔNG có nghĩa là chưa bão hòa: drain đủ dài vẫn xả hết backlog (vd OE/t1 ở 1.3·PIR_max:
+  saturated=0 nhưng lat_avg ≈ 1500). Xác định bão hòa bằng throughput/offered, lat_avg hoặc u_max.
+- U_đo của kênh = số gói bắt đầu truyền trong cửa sổ · 16 / measure; u_max/u_max_ch trong RESULT là kênh
+  bận nhất. U_đo ≤ 1 chỉ đảm bảo khi measure chia hết cho 16 (hai lần truyền cách nhau ≥ 16 ns).
 - `--mode=simcheck` (chạy lâu hơn, không thuộc selftest, exit 1 nếu FAIL):
   - Tải thấp XY t1/t2 ở PIR 0.001, 4 check: (a, hard) mọi gói lat_i ≥ 16·hops_i;
     (b, model) 0 ≤ lat_avg − 16·hops_avg ≤ 1 chu kỳ; (c, stat) |hops_avg − 224/42| ≤ 4·SE với
