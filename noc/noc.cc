@@ -7,23 +7,40 @@
 #include <exception>
 #include <iostream>
 #include <string>
+#include <vector>
 
 using namespace ns3;
 
 int
 main(int argc, char* argv[])
 {
+    // Cờ ẩn (không hiện trong --help): thêm một test HARD fail để kiểm tra exit code.
+    // Gỡ khỏi argv trước khi CommandLine parse, vì CommandLine từ chối tham số lạ.
+    bool forceFail = false;
+    std::vector<char*> args;
+    for (int i = 0; i < argc; ++i)
+    {
+        if (std::string(argv[i]) == "--selftest-force-fail")
+        {
+            forceFail = true;
+        }
+        else
+        {
+            args.push_back(argv[i]);
+        }
+    }
+
     std::string mode;
 
     CommandLine cmd(__FILE__);
     cmd.AddValue("mode", "phi | selftest | sim", mode);
-    cmd.Parse(argc, argv);
+    cmd.Parse(static_cast<int>(args.size()), args.data());
 
     try
     {
         if (mode == "selftest")
         {
-            return noc::RunSelfTest() == 0 ? 0 : 1;
+            return noc::RunSelfTest(forceFail) == 0 ? 0 : 1;
         }
         if (mode == "phi" || mode == "sim")
         {

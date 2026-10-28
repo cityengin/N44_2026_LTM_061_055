@@ -8,6 +8,7 @@ docs/ chỉ để tham khảo các lỗi đã mắc, không sao chép.
 - ns-3 ở ~/ns-3-dev (ns-3.48). noc/ được symlink vào scratch/noc → chương trình `noc`.
 - Build: `cd ~/ns-3-dev && ./ns3 build noc`
 - Chạy: `./ns3 run --no-build "noc --mode=phi --routing=OE --traffic=transpose1"`
+- Cờ ẩn `--selftest-force-fail`: thêm một test HARD luôn fail (selftest phải thoát mã 1), dùng để kiểm tra exit code.
 - C++ theo chuẩn mặc định của ns-3.48 (CMake của ns-3 đặt tối thiểu C++23), không thêm thư viện ngoài.
   Python dùng ~/noc-routing-pressure/.venv.
 
