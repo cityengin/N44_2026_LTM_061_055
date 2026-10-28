@@ -8,16 +8,17 @@
 namespace noc
 {
 
+// Thứ tự cố định E, W, N, S: giá trị của Dir cũng là vị trí bit trong DirSet (routing.h).
 enum class Dir : int
 {
-    N = 0, // y giảm
-    E = 1, // x tăng
-    S = 2, // y tăng
-    W = 3, // x giảm
+    E = 0, // x tăng
+    W = 1, // x giảm
+    N = 2, // y giảm
+    S = 3, // y tăng
     Local = 4,
 };
 
-constexpr int kNumLinkDirs = 4; // N, E, S, W
+constexpr int kNumLinkDirs = 4; // E, W, N, S
 
 const char* DirName(Dir d);
 Dir Opposite(Dir d);
