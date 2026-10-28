@@ -122,12 +122,14 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
   ổn định (tải < 1 trên mọi kênh). Kết quả đó không phải là bằng chứng độc lập rằng φ là thước đo tốt.
 - 5b (U_đo so với U_hop/U_path) kiểm chứng cài đặt (bộ tính φ và mô phỏng nhất quán) và bác bỏ giả
   thiết path (k/p). Nó KHÔNG chứng minh φ đúng trong mọi mô hình router.
-- Phần không hiển nhiên: vị trí "gãy" theo latency (điểm (ii), lat_avg ≥ 2·16·hops_avg) phụ thuộc số
-  kênh gần max (n_near_max = số kênh có ρ_hop ≥ 0.95·φ):
-  1 kênh (OE/t1, OE/t2) → 1.007–1.009; 4 kênh (XY, YX, NF/t2, NF_WS/t1) → 0.994–1.003, riêng OE/uniform
-  0.950; 12 kênh (NF, NF_WS thích ứng) → 0.902–0.904; 56 kênh (XY/YX uniform) → 0.822.
-  φ chỉ cho biết kênh bận nhất; latency tăng sớm hay muộn trước ngưỡng do số kênh gần max quyết định.
-  Xem report/figures/saturation_vs_nearmax.png.
+- Quan sát (chưa phải quy luật đã kiểm): vị trí "gãy" theo latency (điểm (ii), lat_avg ≥ 2·16·hops_avg)
+  giảm khi số kênh gần max tăng (n_near_max = số kênh có ρ_hop ≥ 0.95·φ):
+  1 kênh (OE/t1, OE/t2) → 1.007–1.009; 4 kênh (XY, YX, NF/t2, NF_WS/t1) → 0.994–1.003; 12 kênh (NF,
+  NF_WS thích ứng) → 0.902–0.904; 56 kênh (XY/YX uniform) → 0.822.
+  n_near_max bị lẫn với loại traffic và loại routing: nhóm 4 kênh toàn là routing tất định trên transpose,
+  nhóm 12 toàn là NF/NF_WS thích ứng, nhóm 56 là uniform. Vì vậy chưa tách được tác động của số kênh
+  khỏi loại traffic. OE/uniform là điểm lệch: 4 kênh nhưng gãy ở 0.950.
+  Xem report/figures/saturation_vs_nearmax.png và model ở bước 6b.
 - Chưa kiểm: φ khi có backpressure (wormhole, buffer hữu hạn). Khi đó nghẽn ở một kênh lan ngược về
   phía nguồn, nên ngưỡng thực có thể thấp hơn PIR_max.
 
