@@ -10,6 +10,7 @@ Output:
   (i)   throughput/offered < 0.95  — dễ trễ, vì chỉ các luồng đi qua kênh cổ chai bị chặn
   (ii)  lat_avg ≥ 2·16·hops_avg
   (iii) u_max ≥ 0.98
+knee_pred: điểm gãy (ii) theo model Kleinrock + M/D/1 (mdl_predict.py).
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+import mdl_predict
 import nocrun
 
 # Số liệu của báo cáo cũ (docs/, mục 4.2–4.3), chỉ có hai đầu PIR 0.010 và 0.014.
@@ -91,6 +93,7 @@ def saturation(summary: pd.DataFrame, rho: dict) -> pd.DataFrame:
                      "phi_hop": float(part["phi_hop"].iloc[0]), "pir_max_hop": pir_max,
                      "n_at_max": len(nocrun.max_channels(rho[(algo, traffic)])),
                      "n_near_max": len(nocrun.max_channels(rho[(algo, traffic)], 0.95)),
+                     "knee_pred": mdl_predict.knee_for(rho[(algo, traffic)], traffic),
                      "sat_ratio_thr": r_thr, "sat_ratio_lat": r_lat, "sat_ratio_umax": r_umax,
                      "sat_pir_thr": r_thr * pir_max, "sat_pir_lat": r_lat * pir_max,
                      "sat_pir_umax": r_umax * pir_max})
@@ -239,7 +242,7 @@ def main() -> int:
     fmt = lambda v: f"{v:.4f}"  # noqa: E731
     print("## Điểm bão hòa (pir_ratio; 1.0 = PIR_max_hop)")
     print(sat[["label", "traffic", "phi_hop", "pir_max_hop", "n_at_max", "n_near_max",
-               "sat_ratio_thr", "sat_ratio_lat", "sat_ratio_umax"]].to_string(index=False, float_format=fmt))
+               "sat_ratio_thr", "sat_ratio_lat", "sat_ratio_umax", "knee_pred"]].to_string(index=False, float_format=fmt))
 
     print("\n## Hiệu theo cặp lat_avg (lưới tuyệt đối, CRN): A − B ± CI 95% (* = có ý nghĩa)")
     lat = pdiff[pdiff["metric"] == "lat_avg"].set_index(["traffic", "pir", "a", "b"])
