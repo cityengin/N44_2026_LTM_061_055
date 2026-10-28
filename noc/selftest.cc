@@ -98,13 +98,17 @@ TestChannelConsistency()
 } // namespace
 
 int
-RunSelfTest()
+RunSelfTest(bool forceFail)
 {
     g_hardFailures = 0;
     TestIdCoord();
     TestChannelCount();
     TestNeighbors();
     TestChannelConsistency();
+    if (forceFail)
+    {
+        Check("forced_fail", false, "reason=selftest-force-fail");
+    }
     std::cout << "RESULT,mode=selftest,test=summary,hard_failures=" << g_hardFailures << "\n";
     return g_hardFailures;
 }
