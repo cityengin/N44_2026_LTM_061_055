@@ -89,6 +89,9 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
 - throughput = flit tới đích trong cửa sổ / (W·H·measure); offered = flit tạo trong cửa sổ / (W·H·measure).
   saturated=1 khi còn gói của cửa sổ chưa tới đích; lat_avg_lb tính cả các gói đó với
   latency = thời điểm dừng − thời điểm tạo (cận dưới).
+- `--mode=simcheck` (chạy lâu hơn, không thuộc selftest, exit 1 nếu FAIL): tải thấp XY t1/t2 ở PIR 0.001
+  (lat_avg trong 2% quanh 16·khoảng cách TB, throughput trong 5% quanh PIR·8·flows/49, drops = 0) và
+  NF/t1 so với NF_WS/t2 qua RngRun 1..5 (α = 0.05; FAIL thì tự chạy lại với 1..10).
 
 ## Lưu ý ns-3 đã biết
 - Không cài Internet stack. Gửi bằng NetDevice::Send với protocol 0x0800
