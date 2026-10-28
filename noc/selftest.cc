@@ -967,6 +967,64 @@ TestSimHopsManhattan(Algo algo)
           AlgoTag(algo) + ",traffic=uniform,pir=0.01,delivered=" + std::to_string(r.delivered) +
               ",hop_mismatch=" + std::to_string(r.hopMismatch) +
               ",hops_avg=" + Fixed(r.hopsAvg));
+    // Từng gói: lat_i ≥ 16·hops_i; giá trị âm nghĩa là có bug.
+    Check("sim_lat_ge_16hops",
+          r.delivered > 0 && r.slackMin >= 0.0,
+          AlgoTag(algo) + ",traffic=uniform,pir=0.01,slack_min=" + Short(r.slackMin) +
+              ",slack_max=" + Short(r.slackMax));
+}
+
+// Phân vị nearest-rank với các vector đã biết kết quả.
+void
+TestPercentile()
+{
+    auto range = [](int from, int to) {
+        std::vector<int64_t> v;
+        for (int i = from; i <= to; ++i)
+        {
+            v.push_back(i);
+        }
+        return v;
+    };
+    // Mô phỏng p95 khi có k gói 12 hop (192) trong 100 gói, còn lại 10 hop (160).
+    auto mix = [](int k) {
+        std::vector<int64_t> v(100 - k, 160);
+        v.insert(v.end(), k, 192);
+        return v;
+    };
+    struct Case
+    {
+        const char* name;
+        std::vector<int64_t> v;
+        double q;
+        double expect;
+    };
+
+    const std::vector<Case> cases = {
+        {"1..100_q0.95", range(1, 100), 0.95, 95},
+        {"1..100_q0.5", range(1, 100), 0.5, 50},
+        {"1..100_q1", range(1, 100), 1.0, 100},
+        {"1..100_q0.01", range(1, 100), 0.01, 1},
+        {"1..20_q0.95", range(1, 20), 0.95, 19},
+        {"1..4000_q0.95", range(1, 4000), 0.95, 3800},
+        {"single", {7}, 0.95, 7},
+        {"unsorted", {3, 1, 2}, 0.5, 2},
+        {"5pct_192", mix(5), 0.95, 160},
+        {"6pct_192", mix(6), 0.95, 192},
+    };
+    std::string fail;
+    for (const Case& c : cases)
+    {
+        const double got = PercentileNearestRank(c.v, c.q);
+        if (got != c.expect && fail.empty())
+        {
+            fail = std::string(",case=") + c.name + ",got=" + Short(got) + ",expect=" + Short(c.expect);
+        }
+    }
+    const bool emptyNan = std::isnan(PercentileNearestRank({}, 0.95));
+    Check("percentile_nearest_rank",
+          fail.empty() && emptyNan,
+          "cases=" + std::to_string(cases.size() + 1) + fail);
 }
 
 // Khôi phục RngRun ban đầu khi ra khỏi phạm vi, kể cả khi test fail hay ném exception.
@@ -1084,6 +1142,7 @@ RunSelfTest(bool forceFail)
     TestHeaderTagRoundtrip();
     TestNthDir();
     TestSelectUniform();
+    TestPercentile();
     TestSimSinglePacket();
     TestSimFrame32();
     for (Algo a : {Algo::XY, Algo::YX, Algo::NF, Algo::NF_WS, Algo::OE})

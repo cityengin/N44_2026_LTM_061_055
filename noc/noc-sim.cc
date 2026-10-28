@@ -52,6 +52,7 @@ RunSim(const SimConfig& cfg)
     res.seed = RngSeedManager::GetSeed();
     res.run = RngSeedManager::GetRun();
     res.chanTx.assign(mesh.NumChannels(), 0);
+    res.hopsHist.assign(cfg.w + cfg.h - 1, 0);
 
     const std::vector<Flow> flows = MakeFlows(cfg.pattern, mesh);
     const ChannelPressure cp = ComputePressure(cfg.algo, mesh, flows);
@@ -106,8 +107,16 @@ RunSim(const SimConfig& cfg)
         auto it = pending.find(hdr.GetSeq());
         if (it != pending.end())
         {
-            latencies.push_back(now - createdNs);
+            const int64_t lat = now - createdNs;
+            latencies.push_back(lat);
             hopsSum += hdr.GetHops();
+            if (hdr.GetHops() < res.hopsHist.size())
+            {
+                ++res.hopsHist[hdr.GetHops()];
+            }
+            const auto slack = static_cast<double>(lat - kCyclesPerPacket * hdr.GetHops());
+            res.slackMin = std::isnan(res.slackMin) ? slack : std::min(res.slackMin, slack);
+            res.slackMax = std::isnan(res.slackMax) ? slack : std::max(res.slackMax, slack);
             pending.erase(it);
             if (pending.empty() && now >= winEnd)
             {
@@ -244,22 +253,26 @@ RunSim(const SimConfig& cfg)
         lbSum += static_cast<double>(res.stopNs - created);
     }
     res.latAvgLb = res.generated > 0 ? lbSum / res.generated : nan;
-    if (!latencies.empty())
-    {
-        std::sort(latencies.begin(), latencies.end());
-        const auto rank = static_cast<std::size_t>(std::ceil(0.95 * latencies.size()));
-        res.latP95 = static_cast<double>(latencies[std::max<std::size_t>(rank, 1) - 1]);
-    }
-    else
-    {
-        res.latP95 = nan;
-    }
+    res.latP95 = PercentileNearestRank(std::move(latencies), 0.95);
     const double denom = static_cast<double>(n) * static_cast<double>(cfg.measure);
     res.throughput = kPacketFlits * static_cast<double>(res.arrivedInWindow) / denom;
     res.offered = kPacketFlits * static_cast<double>(res.generated) / denom;
 
     Simulator::Destroy();
     return res;
+}
+
+double
+PercentileNearestRank(std::vector<int64_t> v, double q)
+{
+    if (v.empty())
+    {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+    std::sort(v.begin(), v.end());
+    // Trừ 1e-9 để q·n đúng bằng số nguyên (vd 0.95·100) không bị làm tròn lên hạng kế tiếp.
+    const auto rank = static_cast<std::size_t>(std::ceil(q * v.size() - 1e-9));
+    return static_cast<double>(v[std::clamp<std::size_t>(rank, 1, v.size()) - 1]);
 }
 
 namespace
@@ -369,8 +382,9 @@ Describe(const std::vector<double>& v)
     return {mean, v.size() > 1 ? std::sqrt(ss / (v.size() - 1)) : 0.0};
 }
 
-// Tải thấp: so với giá trị không tải. Trả về true nếu đạt.
-bool
+// Tải thấp (XY, PIR 0.001): bốn kiểm tra tách riêng mô hình và bộ tạo traffic.
+// Trả về số kiểm tra FAIL.
+int
 CheckLowLoad(Pattern pattern, std::ostream& os)
 {
     SimConfig cfg;
@@ -383,26 +397,72 @@ CheckLowLoad(Pattern pattern, std::ostream& os)
     const SimResult r = RunSim(cfg);
     os << FormatResult(cfg, r) << "\n";
 
+    // Phân phối số hop lý thuyết: mỗi nguồn phát cùng tốc độ nên mỗi luồng có xác suất 1/flows.
     const Mesh mesh(cfg.w, cfg.h);
     const std::vector<Flow> flows = MakeFlows(pattern, mesh);
-    double sumDist = 0.0;
+    double sumD = 0.0;
+    double sumD2 = 0.0;
+    int maxD = 0;
     for (const Flow& f : flows)
     {
-        sumDist += mesh.Distance(f.src, f.dst);
+        const int d = mesh.Distance(f.src, f.dst);
+        sumD += d;
+        sumD2 += static_cast<double>(d) * d;
+        maxD = std::max(maxD, d);
     }
-    const double latExpect = kCyclesPerPacket * sumDist / flows.size();
+    const double hopsMean = sumD / flows.size();                     // 224/42
+    const double hopsVar = sumD2 / flows.size() - hopsMean * hopsMean; // 1568/42 − (224/42)²
+
+    const std::string key = std::string("routing=XY,traffic=") + PatternName(pattern) +
+                            ",pir=" + Short(cfg.pir) + ",run=" + std::to_string(r.run);
+    int failures = 0;
+    auto report = [&](const char* check, const char* kind, bool ok, const std::string& detail) {
+        os << "RESULT,mode=simcheck,check=" << check << ",kind=" << kind << "," << key << ","
+           << detail << ",status=" << (ok ? "PASS" : "FAIL") << "\n";
+        failures += ok ? 0 : 1;
+    };
+
+    // a. HARD, từng gói: lat_i ≥ 16·hops_i (store-and-forward không thể nhanh hơn).
+    report("low_load_lat_ge_16hops",
+           "hard",
+           r.delivered > 0 && r.slackMin >= 0.0,
+           "delivered=" + std::to_string(r.delivered) + ",slack_min=" + Short(r.slackMin) +
+               ",slack_max=" + Short(r.slackMax));
+
+    // b. Mô hình: thời gian chờ queue trung bình ở tải thấp nằm trong [0, 1] chu kỳ.
+    const double queueDelay = r.latAvg - kCyclesPerPacket * r.hopsAvg;
+    report("low_load_queue_delay",
+           "model",
+           queueDelay >= 0.0 && queueDelay <= 1.0,
+           "lat_avg=" + Fixed(r.latAvg) + ",hops_avg=" + Fixed(r.hopsAvg) +
+               ",queue_delay=" + Fixed(queueDelay) + ",min=0,max=1");
+
+    // c. Bộ tạo traffic: |hops_avg − μ| ≤ 4·SE, SE = √(σ²_lý_thuyết / delivered).
+    // Kèm số gói có số hop lớn nhất để giải thích lat_p95.
+    const double se = std::sqrt(hopsVar / r.delivered);
+    const double z = (r.hopsAvg - hopsMean) / se;
+    const long nMax = r.hopsHist[maxD];
+    const auto rank = static_cast<long>(std::ceil(0.95 * r.delivered - 1e-9));
+    report("low_load_hops",
+           "stat",
+           std::abs(z) <= 4.0,
+           "hops_avg=" + Fixed(r.hopsAvg) + ",hops_expect=" + Fixed(hopsMean) +
+               ",var_theory=" + Fixed(hopsVar) + ",se=" + Fixed(se) + ",z=" + Fixed(z, 3) +
+               ",z_max=4,hmax=" + std::to_string(maxD) + ",n_hmax=" + std::to_string(nMax) +
+               ",frac_hmax=" + Fixed(static_cast<double>(nMax) / r.delivered) +
+               ",n_hmax_for_p95_eq_hmax=" + std::to_string(r.delivered - rank + 1) +
+               ",lat_p95=" + Short(r.latP95));
+
+    // d. Throughput và drop (giữ từ check cũ).
     const double thrExpect = cfg.pir * kPacketFlits * flows.size() / mesh.NumNodes();
-    const double latErr = std::abs(r.latAvg - latExpect) / latExpect;
     const double thrErr = std::abs(r.throughput - thrExpect) / thrExpect;
-    const bool ok = r.drops == 0 && r.undelivered == 0 && latErr <= 0.02 && thrErr <= 0.05;
-    os << "RESULT,mode=simcheck,check=low_load,routing=XY,traffic=" << PatternName(pattern)
-       << ",pir=" << Short(cfg.pir) << ",run=" << r.run << ",lat_avg=" << Fixed(r.latAvg)
-       << ",lat_expect=" << Fixed(latExpect) << ",lat_err=" << Fixed(latErr)
-       << ",lat_tol=0.02,queue_delay=" << Fixed(r.latAvg - kCyclesPerPacket * r.hopsAvg)
-       << ",throughput=" << Fixed(r.throughput) << ",thr_expect=" << Fixed(thrExpect)
-       << ",thr_err=" << Fixed(thrErr) << ",thr_tol=0.05,drops=" << r.drops
-       << ",undelivered=" << r.undelivered << ",status=" << (ok ? "PASS" : "FAIL") << "\n";
-    return ok;
+    report("low_load_throughput",
+           "stat",
+           r.drops == 0 && r.undelivered == 0 && thrErr <= 0.05,
+           "throughput=" + Fixed(r.throughput) + ",thr_expect=" + Fixed(thrExpect) +
+               ",thr_err=" + Fixed(thrErr) + ",thr_tol=0.05,drops=" + std::to_string(r.drops) +
+               ",undelivered=" + std::to_string(r.undelivered));
+    return failures;
 }
 
 // NF/t1 và NF_WS/t2 là ảnh gương qua R nên phải cho cùng phân phối kết quả.
@@ -441,7 +501,7 @@ CheckMirror(int runs, std::ostream& os)
         const double bound = t * std::sqrt(sa.sd * sa.sd / runs + sb.sd * sb.sd / runs);
         const bool ok = std::abs(diff) <= bound;
         allOk = allOk && ok;
-        os << "RESULT,mode=simcheck,check=mirror_nf_t1_vs_nfws_t2,pir=0.02,runs=" << runs
+        os << "RESULT,mode=simcheck,check=mirror_nf_t1_vs_nfws_t2,kind=stat,pir=0.02,runs=" << runs
            << ",metric=" << metric << ",mean_nf_t1=" << Fixed(sa.mean)
            << ",sd_nf_t1=" << Fixed(sa.sd) << ",mean_nfws_t2=" << Fixed(sb.mean)
            << ",sd_nfws_t2=" << Fixed(sb.sd) << ",diff=" << Fixed(diff)
@@ -460,7 +520,7 @@ RunSimCheck(std::ostream& os)
     int failures = 0;
     for (Pattern p : {Pattern::Transpose1, Pattern::Transpose2})
     {
-        failures += CheckLowLoad(p, os) ? 0 : 1;
+        failures += CheckLowLoad(p, os);
     }
 
     os << "# Ghi chú: kiểm định mirror có α = 0.05 (t với df = n−1, bảo thủ hơn Welch), nên khoảng 5%\n"

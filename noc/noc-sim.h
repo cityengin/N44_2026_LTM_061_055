@@ -5,6 +5,7 @@
 #include "traffic.h"
 
 #include <cstdint>
+#include <limits>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -52,6 +53,10 @@ struct SimResult
     double latAvgLb = 0.0;    // tính cả gói chưa tới: thời điểm dừng − thời điểm tạo
     double latP95 = 0.0;
     double hopsAvg = 0.0;
+    // min/max của (lat_i − 16·hops_i) trên các gói của cửa sổ đã tới đích; âm nghĩa là có bug.
+    double slackMin = std::numeric_limits<double>::quiet_NaN();
+    double slackMax = std::numeric_limits<double>::quiet_NaN();
+    std::vector<long> hopsHist; // số gói của cửa sổ đã tới đích theo số hop
     double throughput = 0.0;  // flit tới đích trong cửa sổ / (W·H·measure)
     double offered = 0.0;     // flit tạo trong cửa sổ / (W·H·measure)
     int64_t stopNs = 0;
@@ -67,6 +72,9 @@ struct SimResult
 };
 
 SimResult RunSim(const SimConfig& cfg);
+
+// Phân vị theo nearest-rank: phần tử thứ ⌈q·n⌉ (từ 1) của v đã sắp xếp; NaN nếu v rỗng.
+double PercentileNearestRank(std::vector<int64_t> v, double q);
 
 // Dòng RESULT,mode=sim,... (không có xuống dòng).
 std::string FormatResult(const SimConfig& cfg, const SimResult& r);
