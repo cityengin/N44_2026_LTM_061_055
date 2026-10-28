@@ -1,12 +1,19 @@
 #include "selftest.h"
 
 #include "cdg.h"
+#include "noc-header.h"
 #include "phi.h"
 #include "routing.h"
 #include "searchtree.h"
+#include "selection.h"
+#include "timestamp-tag.h"
 #include "topology.h"
 #include "traffic.h"
 
+#include "ns3/packet.h"
+#include "ns3/random-variable-stream.h"
+
+#include <array>
 #include <cmath>
 #include <cstdlib>
 #include <exception>
@@ -817,6 +824,90 @@ TestPaperPhi()
     }
 }
 
+// ---------------------------------------------------------------- mô phỏng: thành phần
+
+void
+TestFrameLayout()
+{
+    const uint32_t hdr = NoCHeader().GetSerializedSize();
+    const bool ok = hdr == 10 && PayloadBytes() == 20 &&
+                    kPppHeaderBytes + hdr + PayloadBytes() == kFrameBytes;
+    Check("frame_layout",
+          ok,
+          "ppp=" + std::to_string(kPppHeaderBytes) + ",header=" + std::to_string(hdr) +
+              ",payload=" + std::to_string(PayloadBytes()) + ",frame=" + std::to_string(kFrameBytes));
+}
+
+void
+TestHeaderTagRoundtrip()
+{
+    ns3::Ptr<ns3::Packet> p = ns3::Create<ns3::Packet>(PayloadBytes());
+    NoCHeader h(12, 34, 567890);
+    h.SetHops(7);
+    p->AddHeader(h);
+    p->AddPacketTag(CreationTimeTag(123456789));
+    // Tag không làm tăng số byte; PPP thêm 2 B khi gửi.
+    const bool sizeOk = p->GetSize() == kFrameBytes - kPppHeaderBytes;
+    ns3::Ptr<ns3::Packet> q = p->Copy();
+    NoCHeader r;
+    q->RemoveHeader(r);
+    CreationTimeTag t;
+    const bool tagOk = q->PeekPacketTag(t) && t.GetCreatedNs() == 123456789;
+    const bool ok = sizeOk && tagOk && r.GetSrc() == 12 && r.GetDst() == 34 &&
+                    r.GetSeq() == 567890 && r.GetHops() == 7;
+    Check("header_tag_roundtrip", ok, "size_before_ppp=" + std::to_string(p->GetSize()));
+}
+
+void
+TestNthDir()
+{
+    const DirSet ws = Bit(Dir::W) | Bit(Dir::S);
+    bool ok = NthDir(kAllLinkDirs, 0) == Dir::E && NthDir(kAllLinkDirs, 1) == Dir::W &&
+              NthDir(kAllLinkDirs, 2) == Dir::N && NthDir(kAllLinkDirs, 3) == Dir::S &&
+              NthDir(ws, 0) == Dir::W && NthDir(ws, 1) == Dir::S && CountDirs(ws) == 2;
+    int threw = 0;
+    for (int k : {-1, 2})
+    {
+        try
+        {
+            NthDir(ws, k);
+        }
+        catch (const std::out_of_range&)
+        {
+            ++threw;
+        }
+    }
+    Check("select_nth_dir", ok && threw == 2);
+}
+
+void
+TestSelectUniform()
+{
+    auto rv = ns3::CreateObject<ns3::UniformRandomVariable>();
+    rv->SetStream(1000000); // ngoài dải stream của mô phỏng (3·id + 0..2)
+    const int n = 40000;
+    std::array<int, 4> count{};
+    for (int i = 0; i < n; ++i)
+    {
+        ++count[static_cast<int>(SelectUniform(kAllLinkDirs, rv))];
+    }
+    bool ok = true;
+    for (int c : count)
+    {
+        ok = ok && std::abs(c - n / 4) <= n / 4 / 20; // ±5%
+    }
+    const DirSet ns = Bit(Dir::N) | Bit(Dir::S);
+    for (int i = 0; i < 1000; ++i)
+    {
+        ok = ok && Has(ns, SelectUniform(ns, rv));
+    }
+    Check("select_uniform",
+          ok,
+          "n=" + std::to_string(n) + ",E=" + std::to_string(count[0]) +
+              ",W=" + std::to_string(count[1]) + ",N=" + std::to_string(count[2]) +
+              ",S=" + std::to_string(count[3]));
+}
+
 } // namespace
 
 int
@@ -885,6 +976,11 @@ RunSelfTest(bool forceFail)
         }
     }
     TestPaperPhi();
+
+    TestFrameLayout();
+    TestHeaderTagRoundtrip();
+    TestNthDir();
+    TestSelectUniform();
 
     if (forceFail)
     {
