@@ -17,7 +17,8 @@ from pathlib import Path
 
 import nocrun
 
-META = ["grid", "ratio_target", "pir_arg", "wall_s"]
+# Không ghi thời gian chạy vào CSV: mọi cột đều tất định nên file tái lập được từng byte.
+META = ["grid", "ratio_target", "pir_arg"]
 # Thứ tự trường của dòng RESULT,mode=sim (noc-sim.cc, FormatResult).
 RESULT_FIELDS = ["mode", "routing", "variant", "traffic", "mesh", "pir", "seed", "run", "warmup",
                  "measure", "drain", "generated", "delivered", "undelivered", "saturated", "drops",
@@ -44,6 +45,24 @@ def build_jobs(phi, args) -> list[dict]:
     # Job nặng (PIR cao) chạy trước để cân tải giữa các luồng.
     jobs.sort(key=lambda j: -float(j["pir_arg"]))
     return jobs
+
+
+def sort_key(row: dict) -> tuple:
+    return (row["grid"], row["routing"], row["traffic"], float(row["pir_arg"]), int(row["run"]),
+            int(row["warmup"]), int(row["measure"]), int(row["drain"]))
+
+
+def rewrite_sorted(path) -> None:
+    """Sắp xếp các dòng theo khóa: thứ tự ghi phụ thuộc job nào xong trước, thứ tự cuối thì cố định."""
+    with path.open(newline="") as f:
+        rows = list(csv.DictReader(f))
+    rows.sort(key=sort_key)
+    tmp = path.with_name(path.name + ".tmp")
+    with tmp.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=META + RESULT_FIELDS, extrasaction="raise")
+        writer.writeheader()
+        writer.writerows(rows)
+    tmp.replace(path)
 
 
 def done_keys(path) -> set[tuple]:
@@ -77,7 +96,11 @@ def main() -> int:
     todo = missing[: args.limit] if args.limit else missing
     print(f"# binary={binary} tổng={len(jobs)} đã có={len(jobs) - len(missing)} "
           f"sẽ chạy={len(todo)} workers={args.jobs}", flush=True)
-    if args.dry_run or not todo:
+    if args.dry_run:
+        return 0
+    if not todo:
+        if out.exists():
+            rewrite_sorted(out)
         return 0
 
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -90,12 +113,11 @@ def main() -> int:
     errlog = out.with_name(out.stem + "_errors.log").open("a")
 
     def worker(job):
-        t0 = time.monotonic()
         lines = nocrun.run_noc(binary, [
             "--mode=sim", f"--routing={job['routing']}", f"--traffic={job['traffic']}",
             f"--pir={job['pir_arg']}", f"--RngRun={job['run']}", f"--warmup={job['warmup']}",
             f"--measure={job['measure']}", f"--drain={job['drain']}"])
-        return nocrun.lines_of(lines, "RESULT")[0], time.monotonic() - t0
+        return nocrun.lines_of(lines, "RESULT")[0]
 
     count = 0
     t_start = time.monotonic()
@@ -107,11 +129,11 @@ def main() -> int:
             errlog.write(f"{time.strftime('%F %T')} {job} {result}\n")
             errlog.flush()
             return
-        kv, wall = result
+        kv = result
         if kv["mode"] != "sim" or kv["run"] != job["run"] or kv["routing"] != job["routing"]:
             raise RuntimeError(f"dòng RESULT không khớp job: {kv} / {job}")
         writer.writerow({"grid": job["grid"], "ratio_target": job["ratio_target"],
-                         "pir_arg": job["pir_arg"], "wall_s": f"{wall:.3f}", **kv})
+                         "pir_arg": job["pir_arg"], **kv})
         f.flush()
         if count % 50 == 0 or count == len(todo):
             print(f"# {count}/{len(todo)} ({time.monotonic() - t_start:.0f}s)", flush=True)
@@ -119,6 +141,7 @@ def main() -> int:
     errors = nocrun.run_parallel(todo, worker, args.jobs, on_done)
     f.close()
     errlog.close()
+    rewrite_sorted(out)
     print(f"# xong: {len(todo) - errors} dòng mới, {errors} lỗi (xem {errlog.name})", flush=True)
     return 1 if errors else 0
 

@@ -199,6 +199,13 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
   report/figures/mdl_predict.png. analyze_sweep.py import hàm knee_for của nó để thêm cột knee_pred,
   knee_pred_sc, nên thứ tự chạy là analyze_sweep.py rồi mdl_predict.py. Cần `noc --mode=phi --turns=1`
   (dòng PHITURN: lưu lượng hop từ cổng vào sang kênh ra, uniform đã chia N−1).
+- `make_results_md.py`: sinh report/RESULTS.md (kiểm kê bảng và hình, số đọc từ file, không gõ tay).
+- `reproduce.sh`: chạy lại toàn bộ (build → selftest → simcheck → phi → link_validate → sweep →
+  analyze_sweep → mdl_predict → heatmap → RESULTS.md) vào thư mục tạm, in thời gian từng bước, rồi so
+  từng byte với results/ và report/RESULTS.md đã commit; không ghi đè. Đầu ra phải tất định: không
+  ghi thời gian chạy vào CSV, sweep.csv được sắp xếp theo khóa khi chạy xong, và dữ liệu được sắp xếp
+  trước mọi phép lấy trung bình (thứ tự cộng số thực ảnh hưởng chữ số cuối). Thư mục output đổi được
+  bằng NOC_RESULTS, NOC_FIGURES.
 - CRN: stream tạo gói (3·id+1, 3·id+2) không phụ thuộc routing, nên cùng (traffic, pir, RngRun) thì cùng
   tập gói. So sánh thuật toán bằng hiệu theo cặp trên lưới tuyệt đối. Hệ quả: mọi cấu hình cùng RngRun
   chung nhiễu tạo gói, KHÔNG coi các kênh hay cấu hình là mẫu độc lập (vd mean z của link_validate âm

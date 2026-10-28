@@ -140,6 +140,7 @@ def main() -> int:
     rel = df[df["grid"] == "rel"].copy()
     rel["ratio"] = rel["ratio_target"].astype(float)
     rel = rel[rel["ratio"] <= args.max_ratio + 1e-9]
+    rel = rel.sort_values(["routing", "traffic", "ratio", "run"], kind="mergesort")
     g = rel.groupby(["routing", "traffic", "ratio"])
     sim = g.agg(pir=("pir", "first"), lat_sim=("lat_avg", "mean"), hops_sim=("hops_avg", "mean"),
                 n=("run", "nunique")).reset_index()

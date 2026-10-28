@@ -12,8 +12,9 @@ from typing import Callable, Iterable
 
 NS3_DIR = Path(os.environ.get("NS3_DIR", Path.home() / "ns-3-dev"))
 REPO = Path(__file__).resolve().parent.parent
-RESULTS = REPO / "results"
-FIGURES = REPO / "report" / "figures"
+# Ghi đè được bằng biến môi trường (reproduce.sh ghi vào thư mục tạm rồi so với file đã commit).
+RESULTS = Path(os.environ.get("NOC_RESULTS", REPO / "results"))
+FIGURES = Path(os.environ.get("NOC_FIGURES", REPO / "report" / "figures"))
 
 ALGOS = ["XY", "YX", "NF", "NF_WS", "OE"]
 TRAFFICS = ["uniform", "transpose1", "transpose2"]

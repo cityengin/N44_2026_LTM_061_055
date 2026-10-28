@@ -44,6 +44,8 @@ OLD_REPORT = {
 def load(path) -> pd.DataFrame:
     # pir_arg là khóa dạng chuỗi (đúng chuỗi đã truyền vào --pir), không để pandas đổi thành số.
     df = pd.read_csv(path, dtype={"pir_arg": str, "ratio_target": str})
+    # Thứ tự cố định trước mọi phép lấy trung bình, để kết quả tái lập được từng byte.
+    df = df.sort_values(["grid", "routing", "traffic", "pir", "run"], kind="mergesort").reset_index(drop=True)
     df["thr_ratio"] = df["throughput"] / df["offered"]
     df["lat_norm"] = df["lat_avg"] / (16.0 * df["hops_avg"])
     return df
@@ -126,6 +128,24 @@ def paired(df: pd.DataFrame) -> pd.DataFrame:
                     "sd_diff": sd_d, "var_reduction": sd_d / sd_unpaired if sd_unpaired > 0 else math.nan,
                     "u_max_a": piv["u_max"][a].mean(), "u_max_b": piv["u_max"][b].mean()})
     return pd.DataFrame(rows)
+
+
+def paired_wide(pdiff: pd.DataFrame) -> pd.DataFrame:
+    """Bảng rộng lat_avg trên t1/t2: các cặp OE−XY, NF_WS−XY, OE−NF_WS, NF−XY, dạng "mean ± CI*"."""
+    lat = pdiff[pdiff["metric"] == "lat_avg"].set_index(["traffic", "pir", "a", "b"])
+    wanted = [("OE", "XY"), ("NF_WS", "XY"), ("OE", "NF_WS"), ("NF", "XY")]
+    table = []
+    for traffic in ("transpose1", "transpose2"):
+        for pir in sorted(pdiff["pir"].astype(str).unique(), key=float):
+            row = {"traffic": traffic, "pir": pir}
+            for a, b in wanted:
+                # paired_diffs.csv lưu theo thứ tự tổ hợp (a trước b trong ALGOS); đổi dấu nếu cần.
+                sign, key = (1, (a, b)) if (traffic, pir, a, b) in lat.index else (-1, (b, a))
+                r = lat.loc[(traffic, pir, *key)]
+                row[f"{nocrun.LABELS[a]} − {nocrun.LABELS[b]}"] = (
+                    f"{sign * r['mean_diff']:.1f} ± {r['ci_half']:.1f}{'*' if r['significant'] else ''}")
+            table.append(row)
+    return pd.DataFrame(table)
 
 
 def plot_rel(summary: pd.DataFrame, metric: str, ylabel: str, fname: str, log: bool = False,
@@ -249,20 +269,7 @@ def main() -> int:
                "sat_ratio_thr", "sat_ratio_lat", "sat_ratio_umax", "knee_pred", "knee_pred_sc"]].to_string(index=False, float_format=fmt))
 
     print("\n## Hiệu theo cặp lat_avg (lưới tuyệt đối, CRN): A − B ± CI 95% (* = có ý nghĩa)")
-    lat = pdiff[pdiff["metric"] == "lat_avg"].set_index(["traffic", "pir", "a", "b"])
-    wanted = [("OE", "XY"), ("NF_WS", "XY"), ("OE", "NF_WS"), ("NF", "XY")]
-    table = []
-    for traffic in ("transpose1", "transpose2"):
-        for pir in sorted(pdiff["pir"].unique(), key=float):
-            row = {"traffic": traffic, "pir": pir}
-            for a, b in wanted:
-                # paired_diffs.csv lưu theo thứ tự tổ hợp (a trước b trong ALGOS); đổi dấu nếu cần.
-                sign, key = (1, (a, b)) if (traffic, pir, a, b) in lat.index else (-1, (b, a))
-                r = lat.loc[(traffic, pir, *key)]
-                row[f"{nocrun.LABELS[a]} − {nocrun.LABELS[b]}"] = (
-                    f"{sign * r['mean_diff']:.1f} ± {r['ci_half']:.1f}{'*' if r['significant'] else ''}")
-            table.append(row)
-    print(pd.DataFrame(table).to_string(index=False))
+    print(paired_wide(pdiff).to_string(index=False))
 
     print("\n## Giả thuyết về báo cáo cũ: lat_avg ở PIR 0.010 và 0.014")
     ab = summary[summary["grid"] == "abs"]
