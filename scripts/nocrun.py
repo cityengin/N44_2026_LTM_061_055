@@ -101,6 +101,22 @@ def phi_table(binary: Path, w: int = 7, h: int = 7) -> dict[tuple[str, str], dic
     return table
 
 
+def channel_pressure(binary: Path, method: str = "hop", w: int = 7,
+                     h: int = 7) -> dict[tuple[str, str], dict[str, float]]:
+    """ρ từng kênh (chưa chuẩn hóa) của mọi (routing, traffic): {(routing, traffic): {"u-v": ρ}}."""
+    out = run_noc(binary, ["--mode=phi", f"--method={method}", "--channels=1", f"--W={w}", f"--H={h}"])
+    table: dict[tuple[str, str], dict[str, float]] = {}
+    for kv in lines_of(out, "CHAN"):
+        table.setdefault((kv["routing"], kv["traffic"]), {})[kv["ch"]] = float(kv["rho"])
+    return table
+
+
+def max_channels(rho: dict[str, float], frac: float = 1.0) -> list[str]:
+    """Các kênh có ρ ≥ frac·max ρ (frac = 1: các kênh đạt φ, sai số 1e-6 tương đối)."""
+    phi = max(rho.values())
+    return [ch for ch, r in rho.items() if r >= frac * phi - 1e-6 * phi]
+
+
 def run_parallel(jobs: list, worker: Callable, jobs_n: int, on_done: Callable) -> int:
     """Chạy worker(job) song song; on_done(job, result_or_exception) gọi ở luồng chính.
     Trả về số job lỗi."""
