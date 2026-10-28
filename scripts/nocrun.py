@@ -111,6 +111,16 @@ def channel_pressure(binary: Path, method: str = "hop", w: int = 7,
     return table
 
 
+def turn_flows(binary: Path, w: int = 7, h: int = 7) -> dict[tuple[str, str], dict[tuple[str, str], float]]:
+    """Lưu lượng hop từ cổng vào ("local" hoặc kênh) sang kênh ra, đã chuẩn hóa (uniform chia N−1):
+    {(routing, traffic): {(in, out): rate}}."""
+    out = run_noc(binary, ["--mode=phi", "--method=hop", "--turns=1", f"--W={w}", f"--H={h}"])
+    table: dict[tuple[str, str], dict[tuple[str, str], float]] = {}
+    for kv in lines_of(out, "PHITURN"):
+        table.setdefault((kv["routing"], kv["traffic"]), {})[(kv["in"], kv["out"])] = float(kv["rate"])
+    return table
+
+
 def max_channels(rho: dict[str, float], frac: float = 1.0) -> list[str]:
     """Các kênh có ρ ≥ frac·max ρ (frac = 1: các kênh đạt φ, sai số 1e-6 tương đối)."""
     phi = max(rho.values())

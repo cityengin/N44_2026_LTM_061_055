@@ -10,7 +10,7 @@ Output:
   (i)   throughput/offered < 0.95  — dễ trễ, vì chỉ các luồng đi qua kênh cổ chai bị chặn
   (ii)  lat_avg ≥ 2·16·hops_avg
   (iii) u_max ≥ 0.98
-knee_pred: điểm gãy (ii) theo model Kleinrock + M/D/1 (mdl_predict.py).
+knee_pred, knee_pred_sc: điểm gãy (ii) theo model kleinrock và kleinrock_sc (mdl_predict.py).
 """
 
 from __future__ import annotations
@@ -77,8 +77,9 @@ def crossing(x: np.ndarray, y: np.ndarray, level: float, above: bool) -> float:
     return float(x0 + (level - y0) * (x1 - x0) / (y1 - y0)) if y1 != y0 else float(x1)
 
 
-def saturation(summary: pd.DataFrame, rho: dict) -> pd.DataFrame:
-    """rho: ρ_hop từng kênh theo (routing, traffic), để đếm số kênh đạt φ và gần φ."""
+def saturation(summary: pd.DataFrame, rho: dict, turns: dict) -> pd.DataFrame:
+    """rho: ρ_hop từng kênh theo (routing, traffic), để đếm số kênh đạt φ và gần φ;
+    turns: lưu lượng hop theo cổng (PHITURN), cho model kleinrock_sc."""
     rel = summary[summary["grid"] == "rel"].copy()
     rel["ratio"] = rel["ratio_target"].astype(float)
     rows = []
@@ -94,6 +95,8 @@ def saturation(summary: pd.DataFrame, rho: dict) -> pd.DataFrame:
                      "n_at_max": len(nocrun.max_channels(rho[(algo, traffic)])),
                      "n_near_max": len(nocrun.max_channels(rho[(algo, traffic)], 0.95)),
                      "knee_pred": mdl_predict.knee_for(rho[(algo, traffic)], traffic),
+                     "knee_pred_sc": mdl_predict.knee_for(rho[(algo, traffic)], traffic,
+                                                          turns[(algo, traffic)]),
                      "sat_ratio_thr": r_thr, "sat_ratio_lat": r_lat, "sat_ratio_umax": r_umax,
                      "sat_pir_thr": r_thr * pir_max, "sat_pir_lat": r_lat * pir_max,
                      "sat_pir_umax": r_umax * pir_max})
@@ -222,8 +225,9 @@ def main() -> int:
     df = load(args.sweep)
     summary = summarize(df)
     summary.to_csv(nocrun.RESULTS / "sweep_summary.csv", index=False, float_format="%.6g")
-    rho = nocrun.channel_pressure(nocrun.find_binary(args.allow_default), "hop")
-    sat = saturation(summary, rho)
+    binary = nocrun.find_binary(args.allow_default)
+    rho = nocrun.channel_pressure(binary, "hop")
+    sat = saturation(summary, rho, nocrun.turn_flows(binary))
     sat.to_csv(nocrun.RESULTS / "saturation.csv", index=False, float_format="%.4f")
     pdiff = paired(df)
     pdiff.to_csv(nocrun.RESULTS / "paired_diffs.csv", index=False, float_format="%.6g")
@@ -242,7 +246,7 @@ def main() -> int:
     fmt = lambda v: f"{v:.4f}"  # noqa: E731
     print("## Điểm bão hòa (pir_ratio; 1.0 = PIR_max_hop)")
     print(sat[["label", "traffic", "phi_hop", "pir_max_hop", "n_at_max", "n_near_max",
-               "sat_ratio_thr", "sat_ratio_lat", "sat_ratio_umax", "knee_pred"]].to_string(index=False, float_format=fmt))
+               "sat_ratio_thr", "sat_ratio_lat", "sat_ratio_umax", "knee_pred", "knee_pred_sc"]].to_string(index=False, float_format=fmt))
 
     print("\n## Hiệu theo cặp lat_avg (lưới tuyệt đối, CRN): A − B ± CI 95% (* = có ý nghĩa)")
     lat = pdiff[pdiff["metric"] == "lat_avg"].set_index(["traffic", "pir", "a", "b"])

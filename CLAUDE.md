@@ -148,6 +148,32 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
     1.007–1.009), nhưng KHÔNG tái hiện điểm lệch OE/uniform: model xếp OE/uniform (0.919) sau nhóm tất
     định trên transpose (0.893), trong khi mô phỏng thì ngược lại (0.950 so với 0.994–1.003). Lý do: model
     ước lượng cao nhiều nhất đúng ở nhóm tất định trên transpose.
+- Hiệu chỉnh duy nhất (bước 6c), model **kleinrock_sc** (bỏ self-contention):
+  - Cơ chế: gói đến một kênh từ cùng một cổng vào (kênh láng giềng) đã cách nhau ≥ 16 chu kỳ vì kênh đó
+    chỉ truyền một gói mỗi 16 chu kỳ, nên chúng không xung đột với nhau. Ví dụ XY/t1: kênh cổ chai 6-13
+    nhận toàn bộ lưu lượng từ 5-6 (node 6 tự map nên không phát), nên dù U = 0.9 vẫn không phải chờ.
+  - Công thức (HEURISTIC, không suy ra chặt chẽ): W_ch = W_M/D/1(U_ch)·(1 − Σ_i p_i²), với
+    p_i = rate(i→ch)/ρ(ch), i chạy trên các kênh vào từ node láng giềng; luồng local KHÔNG nằm trong tổng.
+    rate lấy từ `noc --mode=phi --turns=1` (dòng PHITURN, cùng cây tìm kiếm với ρ; test HARD bảo toàn
+    turn_in_sum_eq_rho và turn_out_plus_term_eq_rho).
+  - So sánh hai model (tỉ số phần chờ pred/sim; điểm gãy so với (ii)):
+
+    | | kleinrock | kleinrock_sc |
+    |---|---|---|
+    | queue pred/sim, ratio 0.1 | 1.64–4.74 | 0.89–1.09 |
+    | queue pred/sim, ratio 0.5 | 1.56–4.29 | 0.86–0.96 |
+    | queue pred/sim, ratio 0.9 | 1.36–3.72 | 0.67–0.83 |
+    | lat tổng, ratio 0.9 | +14% … +60% | −3.8% … −17.3% |
+    | queue_delay PIR 0.001 XY/t1, t2 (đo 0.48–0.68) | 2.56 | 0.59 |
+    | knee − (ii) | −0.109 … −0.032 | −0.016 … +0.053 |
+
+  - knee_pred_sc: OE/t1, t2 0.993 (sim 1.007–1.009); tất định trên transpose 0.990 (sim 0.994–1.003);
+    OE/uniform 0.981 (sim 0.950); NF/NF_WS thích ứng 0.936–0.938 (sim 0.902–0.904); XY/YX uniform 0.875
+    (sim 0.822). Model mới giữ đúng toàn bộ thứ tự điểm gãy của mô phỏng, kể cả xếp OE/uniform sớm hơn
+    nhóm tất định trên transpose, nhưng khoảng cách chỉ 0.009 (sim: 0.044–0.053).
+  - Sai số còn lại có dấu ngược model cũ: ở tải cao kleinrock_sc ước lượng thấp phần chờ (0.67–0.83),
+    nên điểm gãy của các cấu hình nhiều kênh gần max bị dự đoán muộn hơn (+0.03…+0.05).
+- **Phần mô hình đã khóa sau 6c**: không hiệu chỉnh thêm công thức hay tham số của model.
 
 ## Lưu ý ns-3 đã biết
 - Không cài Internet stack. Gửi bằng NetDevice::Send với protocol 0x0800
@@ -169,9 +195,10 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
   results/paired_diffs.csv, hình sweep_*.png, old_reports_nf.png, saturation_vs_nearmax.png.
 - `heatmap.py`: heatmap_pred.png (U_hop) và heatmap_meas.png (U_đo) tại pir_ratio 0.9, đọc
   results/link_validate_channels.csv.
-- `mdl_predict.py`: model Kleinrock + M/D/1 so với sweep → results/mdl_predict.csv,
-  report/figures/mdl_predict.png. analyze_sweep.py import hàm knee_for của nó để thêm cột knee_pred, nên
-  thứ tự chạy là analyze_sweep.py rồi mdl_predict.py.
+- `mdl_predict.py`: hai model "kleinrock" và "kleinrock_sc" so với sweep → results/mdl_predict.csv,
+  report/figures/mdl_predict.png. analyze_sweep.py import hàm knee_for của nó để thêm cột knee_pred,
+  knee_pred_sc, nên thứ tự chạy là analyze_sweep.py rồi mdl_predict.py. Cần `noc --mode=phi --turns=1`
+  (dòng PHITURN: lưu lượng hop từ cổng vào sang kênh ra, uniform đã chia N−1).
 - CRN: stream tạo gói (3·id+1, 3·id+2) không phụ thuộc routing, nên cùng (traffic, pir, RngRun) thì cùng
   tập gói. So sánh thuật toán bằng hiệu theo cặp trên lưới tuyệt đối. Hệ quả: mọi cấu hình cùng RngRun
   chung nhiễu tạo gói, KHÔNG coi các kênh hay cấu hình là mẫu độc lập (vd mean z của link_validate âm
