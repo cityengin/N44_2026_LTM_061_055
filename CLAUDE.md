@@ -43,13 +43,28 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
   nên mọi cặp là SW hoặc NE. Với các cặp này NF (âm = W, N) là tất định (SW: W rồi S; NE: N rồi E).
   Vì vậy mọi channel pressure là số nguyên và φ(NF, transpose2) KHÔNG THỂ bằng 2.41.
   Mốc 2.41 không đạt được dưới quy ước chính; đây không phải lỗi code.
-- Giả thuyết (chưa kiểm chứng bằng số): bài báo (Noxim) coi hướng âm = W, S. Lật y → N−1−y biến
-  transpose1 ↔ transpose2 và NF(W,N) ↔ NF(W,S), còn XY và OE không đổi. Do đó dự đoán
-  φ(NF,t1) = φ(NF_WS,t2) và φ(NF,t2) = φ(NF_WS,t1).
+- Giả thuyết (đã kiểm chứng ở bước 3, xem kết quả bên dưới): bài báo (Noxim) coi hướng âm = W, S.
+  Lật y → N−1−y biến transpose1 ↔ transpose2 và NF(W,N) ↔ NF(W,S), còn XY và OE không đổi.
+  Do đó φ(NF,t1) = φ(NF_WS,t2) và φ(NF,t2) = φ(NF_WS,t1). Đẳng thức này đúng tới từng kênh
+  (test `mirror_channel_pressure`).
 - Quyết định: thêm `NF_WS` (âm = W, S; cấm E→S, N→W) làm một Algo đầy đủ. Nó dùng chung hàm routing
   cho φ, CDG và sim (`--routing=NF_WS`). `NF` mặc định vẫn theo quy ước chính. Mọi output của NF_WS
-  ghi `variant=diagnostic`. Không đổi mốc kiểm thử ở trên. Kết quả so sánh sẽ được ghi vào mục này
-  sau bước tính φ.
+  ghi `variant=diagnostic`. Không đổi mốc kiểm thử ở trên.
+- Kết quả bước 3 (7×7, `noc --mode=phi`):
+
+  | routing | traffic | path | hop | bài báo |
+  |---|---|---|---|---|
+  | XY | t1 / t2 | 6 / 6 | 6 / 6 | 6 / 6 |
+  | OE | t1 / t2 | 4.361905 / 4.361905 | 4.8125 / 4.8125 | 4.81 / 4.81 |
+  | NF (quy ước chính) | t1 / t2 | 2.598990 / 6 | 2.40625 / 6 | 6 / 2.41 |
+  | NF_WS (chẩn đoán) | t1 / t2 | 6 / 2.598990 | 6 / 2.40625 | 6 / 2.41 (của NF) |
+  | XY, 3×3 uniform (chưa chuẩn hóa) | — | 6 | 6 | 6 |
+
+  - Phương pháp **hop** kết hợp **NF_WS** khớp mọi số của bài báo trong sai số ±0.005
+    (4.8125 → 4.81, 2.40625 → 2.41). Nhiều khả năng bài báo dùng hop (Fig. 9) và NF với âm = W, S.
+  - Phương pháp path cho OE = 4.36 và NF_WS t2 = 2.60, đúng bằng số trong hai báo cáo cũ.
+    Vậy hai báo cáo cũ đã dùng path (k/p) chứ không dùng hop.
+  - NF theo quy ước chính cho t1/t2 đảo so với bài báo, đúng như dự đoán từ đối xứng.
 
 ## Lưu ý ns-3 đã biết
 - Không cài Internet stack. Gửi bằng NetDevice::Send với protocol 0x0800
