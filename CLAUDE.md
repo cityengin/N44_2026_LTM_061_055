@@ -89,9 +89,16 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
 - throughput = flit tới đích trong cửa sổ / (W·H·measure); offered = flit tạo trong cửa sổ / (W·H·measure).
   saturated=1 khi còn gói của cửa sổ chưa tới đích; lat_avg_lb tính cả các gói đó với
   latency = thời điểm dừng − thời điểm tạo (cận dưới).
-- `--mode=simcheck` (chạy lâu hơn, không thuộc selftest, exit 1 nếu FAIL): tải thấp XY t1/t2 ở PIR 0.001
-  (lat_avg trong 2% quanh 16·khoảng cách TB, throughput trong 5% quanh PIR·8·flows/49, drops = 0) và
-  NF/t1 so với NF_WS/t2 qua RngRun 1..5 (α = 0.05; FAIL thì tự chạy lại với 1..10).
+- `--mode=simcheck` (chạy lâu hơn, không thuộc selftest, exit 1 nếu FAIL):
+  - Tải thấp XY t1/t2 ở PIR 0.001, 4 check: (a, hard) mọi gói lat_i ≥ 16·hops_i;
+    (b, model) 0 ≤ lat_avg − 16·hops_avg ≤ 1 chu kỳ; (c, stat) |hops_avg − 224/42| ≤ 4·SE với
+    SE = √(8.889/delivered), dùng phương sai lý thuyết; (d, stat) drops = 0, undelivered = 0,
+    throughput trong 5% quanh PIR·8·flows/49.
+  - NF/t1 so với NF_WS/t2 qua RngRun 1..5 (cố định, không theo --RngRun; α = 0.05; FAIL thì tự chạy
+    lại với 1..10).
+  - lat_p95 ở tải thấp: chỉ 2/42 nguồn có 12 hop (kỳ vọng 4,76%), nên p95 = 192 khi và chỉ khi số gói
+    12 hop vượt ngưỡng nearest-rank (khoảng 5%), ngược lại rơi vào nhóm 10 hop (165–176). Đã kiểm qua
+    RngRun 1..10: hàm percentile đúng, bộ tạo traffic không lệch (z gộp ≤ 1,9).
 
 ## Lưu ý ns-3 đã biết
 - Không cài Internet stack. Gửi bằng NetDevice::Send với protocol 0x0800
