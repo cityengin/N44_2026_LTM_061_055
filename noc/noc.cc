@@ -44,6 +44,7 @@ main(int argc, char* argv[])
     cmd.AddValue("W", "số cột của lưới", phi.w);
     cmd.AddValue("H", "số hàng của lưới", phi.h);
     cmd.AddValue("channels", "in thêm từng kênh (phi: dòng CHAN, sim: dòng SIMCHAN)", phi.channels);
+    cmd.AddValue("turns", "mode=phi: in lưu lượng hop từ cổng vào sang kênh ra (dòng PHITURN)", phi.turns);
     cmd.AddValue("pir", "mode=sim: gói / node / chu kỳ", sim.pir);
     cmd.AddValue("warmup", "mode=sim: chu kỳ khởi động", sim.warmup);
     cmd.AddValue("measure", "mode=sim: độ dài cửa sổ đo (chu kỳ)", sim.measure);

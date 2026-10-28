@@ -64,6 +64,32 @@ ComputePressure(Algo algo, const Mesh& mesh, const std::vector<Flow>& flows)
     return r;
 }
 
+TurnFlows
+ComputeTurnFlows(Algo algo, const Mesh& mesh, const std::vector<Flow>& flows)
+{
+    TurnFlows t;
+    t.nch = mesh.NumChannels();
+    t.rate.assign(static_cast<std::size_t>(t.nch + 1) * t.nch, 0.0);
+    t.term.assign(t.nch, 0.0);
+    for (const Flow& f : flows)
+    {
+        ForEachPath(algo, mesh, f.src, f.dst, [&](const std::vector<int>& nodes, double prob) {
+            int prev = TurnFlows::kLocal;
+            for (std::size_t i = 0; i + 1 < nodes.size(); ++i)
+            {
+                const int ch = mesh.ChannelBetween(nodes[i], nodes[i + 1]);
+                t.rate[(prev + 1) * t.nch + ch] += f.weight * prob;
+                prev = ch;
+            }
+            if (prev != TurnFlows::kLocal)
+            {
+                t.term[prev] += f.weight * prob;
+            }
+        });
+    }
+    return t;
+}
+
 PhiResult
 MaxPressure(const std::vector<double>& rho)
 {
@@ -154,6 +180,30 @@ RunPhiMode(const PhiOptions& opt, std::ostream& os)
             }
             const std::vector<Flow> flows = MakeFlows(pattern, mesh);
             const ChannelPressure cp = ComputePressure(algo, mesh, flows);
+            if (opt.turns)
+            {
+                // Luôn theo phương pháp hop; uniform chia N−1 như phi_norm.
+                const TurnFlows t = ComputeTurnFlows(algo, mesh, flows);
+                const double norm = NormFactor(pattern, mesh);
+                const std::string variant = VariantName(algo);
+                const std::string key = std::string("routing=") + AlgoName(algo) +
+                                        (variant.empty() ? "" : ",variant=" + variant) +
+                                        ",traffic=" + PatternName(pattern) + ",mesh=" + meshTag;
+                for (int in = TurnFlows::kLocal; in < t.nch; ++in)
+                {
+                    for (int out = 0; out < t.nch; ++out)
+                    {
+                        const double r = t.Rate(in, out);
+                        if (r > 0.0)
+                        {
+                            results << "PHITURN," << key << ",in="
+                                    << (in == TurnFlows::kLocal ? "local" : mesh.ChannelName(in))
+                                    << ",out=" << mesh.ChannelName(out) << ",rate=" << Sig(r * norm)
+                                    << "\n";
+                        }
+                    }
+                }
+            }
             for (Method method : methods)
             {
                 const std::vector<double>& rho = cp.Get(method);

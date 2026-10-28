@@ -753,6 +753,52 @@ TestMirrorPressure(Algo a, Pattern pa, Algo b, Pattern pb, const Mesh& m)
               MeshTag(m) + fail);
 }
 
+// Lưu lượng hop theo cổng (mọi traffic), với ρ = ρ_hop:
+//   turn_in_sum_eq_rho:        Σ_in rate(in→c) = ρ(c), và rate chỉ khác 0 giữa hai kênh nối tiếp;
+//   turn_out_plus_term_eq_rho: Σ_out rate(c→out) + lưu lượng kết thúc sau c = ρ(c).
+void
+TestTurnFlows(Algo algo, const Mesh& m)
+{
+    std::string inFail;
+    std::string outFail;
+    for (Pattern p : kAllPatterns)
+    {
+        const TurnFlows t = ComputeTurnFlows(algo, m, MakeFlows(p, m));
+        const std::vector<double>& rho = Pressure(algo, p, m).hop;
+        for (int c = 0; c < m.NumChannels(); ++c)
+        {
+            const std::string where = std::string(",traffic=") + PatternName(p) + ",ch=" + m.ChannelName(c);
+            double in = 0.0;
+            for (int i = TurnFlows::kLocal; i < m.NumChannels(); ++i)
+            {
+                const double r = t.Rate(i, c);
+                in += r;
+                if (r > 0.0 && i != TurnFlows::kLocal && m.GetChannel(i).v != m.GetChannel(c).u &&
+                    inFail.empty())
+                {
+                    inFail = where + ",in=" + m.ChannelName(i) + ",reason=khong_noi_tiep";
+                }
+            }
+            double out = t.term[c];
+            for (int o = 0; o < m.NumChannels(); ++o)
+            {
+                out += t.Rate(c, o);
+            }
+            const double tol = 1e-9 * std::max(1.0, rho[c]);
+            if (std::abs(in - rho[c]) > tol && inFail.empty())
+            {
+                inFail = where + ",sum_in=" + Fixed(in, 9) + ",rho=" + Fixed(rho[c], 9);
+            }
+            if (std::abs(out - rho[c]) > tol && outFail.empty())
+            {
+                outFail = where + ",sum_out_plus_term=" + Fixed(out, 9) + ",rho=" + Fixed(rho[c], 9);
+            }
+        }
+    }
+    Check("turn_in_sum_eq_rho", inFail.empty(), AlgoTag(algo) + "," + MeshTag(m) + inFail);
+    Check("turn_out_plus_term_eq_rho", outFail.empty(), AlgoTag(algo) + "," + MeshTag(m) + outFail);
+}
+
 // FULL phải có chu trình (đối chứng âm); các thuật toán còn lại phải không có chu trình.
 void
 TestCdg(Algo algo, const Mesh& m)
@@ -1159,6 +1205,10 @@ RunSelfTest(bool forceFail)
         for (Algo a : kAllAlgos)
         {
             TestCdg(a, m);
+        }
+        for (Algo a : kAllAlgos)
+        {
+            TestTurnFlows(a, m);
         }
     }
     TestPaperPhi();
