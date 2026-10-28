@@ -143,6 +143,19 @@ Mesh::ChannelId(int u, Dir d) const
     return m_chanIndex[u * kNumLinkDirs + static_cast<int>(d)];
 }
 
+int
+Mesh::ChannelBetween(int u, int v) const
+{
+    for (int k = 0; k < kNumLinkDirs; ++k)
+    {
+        if (Neighbor(u, static_cast<Dir>(k)) == v)
+        {
+            return m_chanIndex[u * kNumLinkDirs + k];
+        }
+    }
+    return -1;
+}
+
 std::string
 Mesh::ChannelName(int ch) const
 {

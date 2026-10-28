@@ -58,6 +58,8 @@ class Mesh
     const Channel& GetChannel(int ch) const;
     // −1 nếu không có link theo hướng d.
     int ChannelId(int u, Dir d) const;
+    // Kênh u→v nếu u, v kề nhau, ngược lại −1.
+    int ChannelBetween(int u, int v) const;
     // Dạng "u-v" như bài báo, ví dụ "17-24".
     std::string ChannelName(int ch) const;
 
