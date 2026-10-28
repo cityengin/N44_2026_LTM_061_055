@@ -5,3 +5,5 @@ results/*.csv
 !results/link_validate_z.csv
 !results/saturation.csv
 !results/paired_diffs.csv
+!results/sweep.csv
+results/*.log
