@@ -1,13 +1,19 @@
 #include "selftest.h"
 
+#include "cdg.h"
+#include "phi.h"
 #include "routing.h"
 #include "searchtree.h"
 #include "topology.h"
+#include "traffic.h"
 
 #include <cmath>
 #include <cstdlib>
 #include <exception>
+#include <iomanip>
 #include <iostream>
+#include <map>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -20,6 +26,17 @@ namespace
 {
 
 int g_hardFailures = 0;
+int g_softMatch = 0;
+int g_softMismatch = 0;
+
+// Test SOFT (so với số của bài báo): KHÔNG tính vào exit code.
+void
+Soft(const std::string& test, bool match, const std::string& detail)
+{
+    std::cout << "RESULT,mode=selftest,test=" << test
+              << ",status=" << (match ? "MATCH" : "MISMATCH") << "," << detail << "\n";
+    ++(match ? g_softMatch : g_softMismatch);
+}
 
 // Test HARD: sai thì tính vào exit code.
 void
@@ -55,11 +72,28 @@ std::string
 AlgoTag(Algo algo)
 {
     std::string tag = std::string("routing=") + AlgoName(algo);
-    if (IsDiagnostic(algo))
+    const std::string variant = VariantName(algo);
+    if (!variant.empty())
     {
-        tag += ",variant=diagnostic";
+        tag += ",variant=" + variant;
     }
     return tag;
+}
+
+std::string
+Fixed(double v)
+{
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(6) << v;
+    return ss.str();
+}
+
+std::string
+Short(double v)
+{
+    std::ostringstream ss;
+    ss << v;
+    return ss.str();
 }
 
 std::string
@@ -584,12 +618,213 @@ TestPaths0To48(Algo algo, long expect)
               ",expect=" + std::to_string(expect) + (ok ? "" : ",samples=" + samples + error));
 }
 
+// ---------------------------------------------------------------- traffic, phi, cdg
+
+void
+TestTrafficFlows()
+{
+    Mesh m(7, 7);
+    const std::vector<Flow> un = MakeFlows(Pattern::Uniform, m);
+    const std::vector<Flow> t1 = MakeFlows(Pattern::Transpose1, m);
+    const std::vector<Flow> t2 = MakeFlows(Pattern::Transpose2, m);
+    bool ok = un.size() == 2352 && t1.size() == 42 && t2.size() == 42;
+    bool has10to26 = false; // ví dụ transpose1 ở mục 5.3 của bài báo
+    for (const Flow& f : t1)
+    {
+        const Coord s = m.ToCoord(f.src);
+        const Coord d = m.ToCoord(f.dst);
+        ok = ok && f.src != f.dst && f.weight == 1.0 && d.x == 6 - s.y && d.y == 6 - s.x;
+        has10to26 = has10to26 || (f.src == 10 && f.dst == 26);
+    }
+    for (const Flow& f : t2)
+    {
+        const Coord s = m.ToCoord(f.src);
+        const Coord d = m.ToCoord(f.dst);
+        ok = ok && f.src != f.dst && f.weight == 1.0 && d.x == s.y && d.y == s.x;
+    }
+    bool threw = false;
+    try
+    {
+        MakeFlows(Pattern::Transpose1, Mesh(3, 5));
+    }
+    catch (const std::invalid_argument&)
+    {
+        threw = true;
+    }
+    Check("traffic_flows",
+          ok && has10to26 && threw,
+          MeshTag(m) + ",uniform=" + std::to_string(un.size()) + ",transpose1=" +
+              std::to_string(t1.size()) + ",transpose2=" + std::to_string(t2.size()));
+}
+
+// ρ được tính một lần cho mỗi (routing, traffic, lưới) rồi dùng lại giữa các test.
+const ChannelPressure&
+Pressure(Algo algo, Pattern p, const Mesh& m)
+{
+    static std::map<std::tuple<int, int, int, int>, ChannelPressure> cache;
+    const auto key = std::make_tuple(static_cast<int>(algo), static_cast<int>(p), m.W(), m.H());
+    auto it = cache.find(key);
+    if (it == cache.end())
+    {
+        it = cache.emplace(key, ComputePressure(algo, m, MakeFlows(p, m))).first;
+    }
+    return it->second;
+}
+
+// Bảo toàn: Σ_kênh ρ = Σ_cặp (trọng số × khoảng cách Manhattan), mọi traffic, cả 2 phương pháp.
+void
+TestConservation(Algo algo, const Mesh& m)
+{
+    std::string fail;
+    int checked = 0;
+    for (Pattern p : kAllPatterns)
+    {
+        double expect = 0.0;
+        for (const Flow& f : MakeFlows(p, m))
+        {
+            expect += f.weight * m.Distance(f.src, f.dst);
+        }
+        for (Method meth : kAllMethods)
+        {
+            double sum = 0.0;
+            for (double v : Pressure(algo, p, m).Get(meth))
+            {
+                sum += v;
+            }
+            ++checked;
+            if (std::abs(sum - expect) > 1e-6 && fail.empty())
+            {
+                fail = std::string(",traffic=") + PatternName(p) + ",method=" + MethodName(meth) +
+                       ",sum_rho=" + Fixed(sum) + ",expect=" + Fixed(expect);
+            }
+        }
+    }
+    Check("conservation",
+          fail.empty(),
+          AlgoTag(algo) + "," + MeshTag(m) + ",checked=" + std::to_string(checked) + fail);
+}
+
+// Routing tất định với traffic này: path == hop trên mọi kênh và mọi ρ là số nguyên.
+void
+TestDeterministicInteger(Algo algo, Pattern p, const Mesh& m)
+{
+    const ChannelPressure& cp = Pressure(algo, p, m);
+    std::string fail;
+    for (int ch = 0; ch < m.NumChannels() && fail.empty(); ++ch)
+    {
+        const double a = cp.path[ch];
+        const double b = cp.hop[ch];
+        if (std::abs(a - b) > 1e-9 || std::abs(a - std::round(a)) > 1e-9)
+        {
+            fail = ",ch=" + m.ChannelName(ch) + ",path=" + Fixed(a) + ",hop=" + Fixed(b);
+        }
+    }
+    Check("deterministic_integer",
+          fail.empty(),
+          AlgoTag(algo) + ",traffic=" + PatternName(p) + "," + MeshTag(m) + fail);
+}
+
+int
+MirrorChannel(const Mesh& m, int ch)
+{
+    const Channel& c = m.GetChannel(ch);
+    return m.ChannelBetween(Mirror(m, c.u), Mirror(m, c.v));
+}
+
+// Đối xứng cấp kênh qua R: ρ(a, pa, R(ch)) == ρ(b, pb, ch) với mọi kênh, cả 2 phương pháp.
+void
+TestMirrorPressure(Algo a, Pattern pa, Algo b, Pattern pb, const Mesh& m)
+{
+    std::string fail;
+    for (Method meth : kAllMethods)
+    {
+        const std::vector<double>& ra = Pressure(a, pa, m).Get(meth);
+        const std::vector<double>& rb = Pressure(b, pb, m).Get(meth);
+        for (int ch = 0; ch < m.NumChannels() && fail.empty(); ++ch)
+        {
+            const int rch = MirrorChannel(m, ch);
+            if (std::abs(ra[rch] - rb[ch]) > 1e-9)
+            {
+                fail = std::string(",method=") + MethodName(meth) + ",ch=" + m.ChannelName(ch) +
+                       ",lhs=" + Fixed(ra[rch]) + ",rhs=" + Fixed(rb[ch]);
+            }
+        }
+    }
+    const bool diag = IsDiagnostic(a) || IsDiagnostic(b);
+    Check("mirror_channel_pressure",
+          fail.empty(),
+          std::string("lhs=") + AlgoName(a) + ":" + PatternName(pa) + ":R(ch),rhs=" + AlgoName(b) +
+              ":" + PatternName(pb) + ":ch" + (diag ? ",variant=diagnostic" : "") + "," +
+              MeshTag(m) + fail);
+}
+
+// FULL phải có chu trình (đối chứng âm); các thuật toán còn lại phải không có chu trình.
+void
+TestCdg(Algo algo, const Mesh& m)
+{
+    const bool expectAcyclic = algo != Algo::FULL;
+    const CdgResult r = CheckCdg(algo, m);
+    Check(expectAcyclic ? "cdg_acyclic" : "cdg_cycle_negative_control",
+          r.acyclic == expectAcyclic,
+          AlgoTag(algo) + "," + MeshTag(m) + ",channels=" + std::to_string(r.channels) +
+              ",edges=" + std::to_string(r.edges) + ",turn_edges=" + std::to_string(r.turnEdges) +
+              ",acyclic=" + (r.acyclic ? "1" : "0") +
+              (r.cycle.empty() ? "" : ",cycle=" + CycleString(m, r.cycle)));
+}
+
+// SOFT: so φ với số của bài báo (±0.005). NF_WS được so với số của NF trong bài báo.
+void
+TestPaperPhi()
+{
+    struct Ref
+    {
+        Algo algo;
+        Pattern p;
+        double paper;
+    };
+
+    const Ref refs[] = {
+        {Algo::XY, Pattern::Transpose1, 6.0},
+        {Algo::OE, Pattern::Transpose1, 4.81},
+        {Algo::NF, Pattern::Transpose1, 6.0},
+        {Algo::NF_WS, Pattern::Transpose1, 6.0},
+        {Algo::XY, Pattern::Transpose2, 6.0},
+        {Algo::OE, Pattern::Transpose2, 4.81},
+        {Algo::NF, Pattern::Transpose2, 2.41},
+        {Algo::NF_WS, Pattern::Transpose2, 2.41},
+    };
+    const Mesh m7(7, 7);
+    for (const Ref& r : refs)
+    {
+        for (Method meth : kAllMethods)
+        {
+            const double phi = MaxPressure(Pressure(r.algo, r.p, m7).Get(meth)).phi;
+            Soft("paper_phi",
+                 std::abs(phi - r.paper) <= 0.005,
+                 AlgoTag(r.algo) + ",traffic=" + PatternName(r.p) + ",method=" + MethodName(meth) +
+                     "," + MeshTag(m7) + ",got=" + Fixed(phi) + ",paper=" + Short(r.paper) +
+                     (r.algo == Algo::NF_WS ? ",paper_ref=NF" : "") + ",tol=0.005");
+        }
+    }
+    const Mesh m3(3, 3);
+    for (Method meth : kAllMethods)
+    {
+        const double phi = MaxPressure(Pressure(Algo::XY, Pattern::Uniform, m3).Get(meth)).phi;
+        Soft("paper_phi",
+             std::abs(phi - 6.0) <= 0.005,
+             std::string("routing=XY,traffic=uniform,method=") + MethodName(meth) + "," +
+                 MeshTag(m3) + ",normalized=0,got=" + Fixed(phi) + ",paper=6,tol=0.005");
+    }
+}
+
 } // namespace
 
 int
 RunSelfTest(bool forceFail)
 {
     g_hardFailures = 0;
+    g_softMatch = 0;
+    g_softMismatch = 0;
     TestIdCoord();
     TestChannelCount();
     TestNeighbors();
@@ -626,11 +861,37 @@ RunSelfTest(bool forceFail)
     TestPaths0To48(Algo::OE, 84);
     TestPaths0To48(Algo::XY, 1);
 
+    TestTrafficFlows();
+    for (const Mesh& m : TestMeshes())
+    {
+        for (Algo a : kAllAlgos)
+        {
+            TestConservation(a, m);
+        }
+        for (Pattern p : kAllPatterns)
+        {
+            TestDeterministicInteger(Algo::XY, p, m);
+            TestDeterministicInteger(Algo::YX, p, m);
+        }
+        TestDeterministicInteger(Algo::NF, Pattern::Transpose2, m);
+        TestDeterministicInteger(Algo::NF_WS, Pattern::Transpose1, m);
+        TestMirrorPressure(Algo::NF_WS, Pattern::Transpose1, Algo::NF, Pattern::Transpose2, m);
+        TestMirrorPressure(Algo::NF_WS, Pattern::Transpose2, Algo::NF, Pattern::Transpose1, m);
+        TestMirrorPressure(Algo::XY, Pattern::Transpose1, Algo::XY, Pattern::Transpose2, m);
+        TestMirrorPressure(Algo::OE, Pattern::Transpose1, Algo::OE, Pattern::Transpose2, m);
+        for (Algo a : kAllAlgos)
+        {
+            TestCdg(a, m);
+        }
+    }
+    TestPaperPhi();
+
     if (forceFail)
     {
         Check("forced_fail", false, "reason=selftest-force-fail");
     }
-    std::cout << "RESULT,mode=selftest,test=summary,hard_failures=" << g_hardFailures << "\n";
+    std::cout << "RESULT,mode=selftest,test=summary,hard_failures=" << g_hardFailures
+              << ",soft_match=" << g_softMatch << ",soft_mismatch=" << g_softMismatch << "\n";
     return g_hardFailures;
 }
 

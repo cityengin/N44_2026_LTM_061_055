@@ -121,4 +121,14 @@ IsDiagnostic(Algo algo)
     return algo == Algo::NF_WS;
 }
 
+const char*
+VariantName(Algo algo)
+{
+    if (IsDiagnostic(algo))
+    {
+        return "diagnostic";
+    }
+    return algo == Algo::FULL ? "test_only" : "";
+}
+
 } // namespace noc

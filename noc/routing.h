@@ -56,5 +56,7 @@ const char* AlgoName(Algo algo);
 Algo ParseAlgo(const std::string& name);
 // true với biến thể chẩn đoán (NF_WS): output phải ghi variant=diagnostic.
 bool IsDiagnostic(Algo algo);
+// Nhãn variant= trong output: "diagnostic" (NF_WS), "test_only" (FULL), "" với thuật toán chính.
+const char* VariantName(Algo algo);
 
 } // namespace noc
