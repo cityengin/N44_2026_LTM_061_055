@@ -3,6 +3,7 @@ __pycache__/
 results/*.csv
 !results/link_validate_summary.csv
 !results/link_validate_z.csv
+!results/link_validate_channels.csv
 !results/saturation.csv
 !results/paired_diffs.csv
 !results/sweep.csv
