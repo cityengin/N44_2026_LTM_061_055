@@ -37,7 +37,7 @@ main(int argc, char* argv[])
     noc::SimConfig sim;
 
     CommandLine cmd(__FILE__);
-    cmd.AddValue("mode", "phi | selftest | sim", mode);
+    cmd.AddValue("mode", "phi | selftest | sim | simcheck", mode);
     cmd.AddValue("routing", "all | XY | YX | NF | NF_WS | OE | FULL", phi.routing);
     cmd.AddValue("traffic", "all | uniform | transpose1 | transpose2", phi.traffic);
     cmd.AddValue("method", "mode=phi: both | path | hop", phi.method);
@@ -76,7 +76,11 @@ main(int argc, char* argv[])
             noc::RunSimMode(sim, std::cout);
             return 0;
         }
-        std::cerr << "Thiếu hoặc sai --mode (phi | selftest | sim): '" << mode << "'\n";
+        if (mode == "simcheck")
+        {
+            return noc::RunSimCheck(std::cout) == 0 ? 0 : 1;
+        }
+        std::cerr << "Thiếu hoặc sai --mode (phi | selftest | sim | simcheck): '" << mode << "'\n";
         return 2;
     }
     catch (const std::exception& e)

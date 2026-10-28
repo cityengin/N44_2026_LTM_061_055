@@ -74,4 +74,10 @@ std::string FormatResult(const SimConfig& cfg, const SimResult& r);
 // --mode=sim: chạy một lần, in dòng RESULT và (nếu cfg.channels) các dòng SIMCHAN.
 void RunSimMode(const SimConfig& cfg, std::ostream& os);
 
+// --mode=simcheck: các kiểm tra chạy lâu hơn, không thuộc selftest. Trả về số kiểm tra FAIL.
+//  - tải thấp: XY, transpose1/transpose2, PIR 0.001: lat_avg ≈ 16·(khoảng cách TB),
+//    throughput ≈ PIR·8·flows/(W·H), drops = 0;
+//  - NF/transpose1 so với NF_WS/transpose2 (ảnh gương qua R) trên 5 seed, α = 0.05.
+int RunSimCheck(std::ostream& os);
+
 } // namespace noc

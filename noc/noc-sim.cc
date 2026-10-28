@@ -316,4 +316,165 @@ RunSimMode(const SimConfig& cfg, std::ostream& os)
     }
 }
 
+namespace
+{
+
+// Khôi phục RngRun ban đầu khi ra khỏi phạm vi.
+class RngRunGuard
+{
+  public:
+    RngRunGuard()
+        : m_run(RngSeedManager::GetRun())
+    {
+    }
+
+    ~RngRunGuard() { RngSeedManager::SetRun(m_run); }
+
+    RngRunGuard(const RngRunGuard&) = delete;
+    RngRunGuard& operator=(const RngRunGuard&) = delete;
+
+  private:
+    uint64_t m_run;
+};
+
+// t_{0.975, df}: phân vị hai phía α = 0.05.
+double
+TCrit975(int df)
+{
+    static const double table[] =
+        {12.706, 4.303, 3.182, 2.776, 2.571, 2.447, 2.365, 2.306, 2.262, 2.228};
+    return df >= 1 && df <= 10 ? table[df - 1] : 1.96;
+}
+
+struct Sample
+{
+    double mean;
+    double sd; // độ lệch chuẩn mẫu (chia n − 1)
+};
+
+Sample
+Describe(const std::vector<double>& v)
+{
+    double sum = 0.0;
+    for (double x : v)
+    {
+        sum += x;
+    }
+    const double mean = sum / v.size();
+    double ss = 0.0;
+    for (double x : v)
+    {
+        ss += (x - mean) * (x - mean);
+    }
+    return {mean, v.size() > 1 ? std::sqrt(ss / (v.size() - 1)) : 0.0};
+}
+
+// Tải thấp: so với giá trị không tải. Trả về true nếu đạt.
+bool
+CheckLowLoad(Pattern pattern, std::ostream& os)
+{
+    SimConfig cfg;
+    cfg.algo = Algo::XY;
+    cfg.pattern = pattern;
+    cfg.pir = 0.001;
+    cfg.warmup = 1000;
+    cfg.measure = 100000;
+    cfg.drain = 20000;
+    const SimResult r = RunSim(cfg);
+    os << FormatResult(cfg, r) << "\n";
+
+    const Mesh mesh(cfg.w, cfg.h);
+    const std::vector<Flow> flows = MakeFlows(pattern, mesh);
+    double sumDist = 0.0;
+    for (const Flow& f : flows)
+    {
+        sumDist += mesh.Distance(f.src, f.dst);
+    }
+    const double latExpect = kCyclesPerPacket * sumDist / flows.size();
+    const double thrExpect = cfg.pir * kPacketFlits * flows.size() / mesh.NumNodes();
+    const double latErr = std::abs(r.latAvg - latExpect) / latExpect;
+    const double thrErr = std::abs(r.throughput - thrExpect) / thrExpect;
+    const bool ok = r.drops == 0 && r.undelivered == 0 && latErr <= 0.02 && thrErr <= 0.05;
+    os << "RESULT,mode=simcheck,check=low_load,routing=XY,traffic=" << PatternName(pattern)
+       << ",pir=" << Short(cfg.pir) << ",run=" << r.run << ",lat_avg=" << Fixed(r.latAvg)
+       << ",lat_expect=" << Fixed(latExpect) << ",lat_err=" << Fixed(latErr)
+       << ",lat_tol=0.02,queue_delay=" << Fixed(r.latAvg - kCyclesPerPacket * r.hopsAvg)
+       << ",throughput=" << Fixed(r.throughput) << ",thr_expect=" << Fixed(thrExpect)
+       << ",thr_err=" << Fixed(thrErr) << ",thr_tol=0.05,drops=" << r.drops
+       << ",undelivered=" << r.undelivered << ",status=" << (ok ? "PASS" : "FAIL") << "\n";
+    return ok;
+}
+
+// NF/t1 và NF_WS/t2 là ảnh gương qua R nên phải cho cùng phân phối kết quả.
+// So mean của lat_avg và throughput qua RngRun 1..runs: đạt nếu |Δ| ≤ t·√(s₁²/n + s₂²/n).
+bool
+CheckMirror(int runs, std::ostream& os)
+{
+    std::vector<double> latA;
+    std::vector<double> latB;
+    std::vector<double> thrA;
+    std::vector<double> thrB;
+    for (int run = 1; run <= runs; ++run)
+    {
+        RngSeedManager::SetRun(run);
+        for (auto [algo, pattern] : {std::pair{Algo::NF, Pattern::Transpose1},
+                                     std::pair{Algo::NF_WS, Pattern::Transpose2}})
+        {
+            SimConfig cfg;
+            cfg.algo = algo;
+            cfg.pattern = pattern;
+            cfg.pir = 0.02;
+            const SimResult r = RunSim(cfg);
+            os << FormatResult(cfg, r) << "\n";
+            (algo == Algo::NF ? latA : latB).push_back(r.latAvg);
+            (algo == Algo::NF ? thrA : thrB).push_back(r.throughput);
+        }
+    }
+    const double t = TCrit975(runs - 1);
+    bool allOk = true;
+    for (auto [metric, a, b] : {std::tuple{"lat_avg", &latA, &latB},
+                                std::tuple{"throughput", &thrA, &thrB}})
+    {
+        const Sample sa = Describe(*a);
+        const Sample sb = Describe(*b);
+        const double diff = sa.mean - sb.mean;
+        const double bound = t * std::sqrt(sa.sd * sa.sd / runs + sb.sd * sb.sd / runs);
+        const bool ok = std::abs(diff) <= bound;
+        allOk = allOk && ok;
+        os << "RESULT,mode=simcheck,check=mirror_nf_t1_vs_nfws_t2,pir=0.02,runs=" << runs
+           << ",metric=" << metric << ",mean_nf_t1=" << Fixed(sa.mean)
+           << ",sd_nf_t1=" << Fixed(sa.sd) << ",mean_nfws_t2=" << Fixed(sb.mean)
+           << ",sd_nfws_t2=" << Fixed(sb.sd) << ",diff=" << Fixed(diff)
+           << ",bound=" << Fixed(bound) << ",t=" << Fixed(t, 3) << ",df=" << runs - 1
+           << ",alpha=0.05,status=" << (ok ? "PASS" : "FAIL") << "\n";
+    }
+    return allOk;
+}
+
+} // namespace
+
+int
+RunSimCheck(std::ostream& os)
+{
+    const RngRunGuard guard;
+    int failures = 0;
+    for (Pattern p : {Pattern::Transpose1, Pattern::Transpose2})
+    {
+        failures += CheckLowLoad(p, os) ? 0 : 1;
+    }
+
+    os << "# Ghi chú: kiểm định mirror có α = 0.05 (t với df = n−1, bảo thủ hơn Welch), nên khoảng 5%\n"
+       << "# số lần chạy có thể FAIL dù hai cấu hình tương đương. Nếu FAIL với RngRun 1..5 thì tự\n"
+       << "# chạy lại với RngRun 1..10 trước khi kết luận.\n";
+    bool mirrorOk = CheckMirror(5, os);
+    if (!mirrorOk)
+    {
+        os << "# Mirror FAIL với RngRun 1..5 → chạy lại với RngRun 1..10\n";
+        mirrorOk = CheckMirror(10, os);
+    }
+    failures += mirrorOk ? 0 : 1;
+    os << "RESULT,mode=simcheck,check=summary,failures=" << failures << "\n";
+    return failures;
+}
+
 } // namespace noc
