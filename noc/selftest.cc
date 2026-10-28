@@ -1027,6 +1027,31 @@ TestPercentile()
           "cases=" + std::to_string(cases.size() + 1) + fail);
 }
 
+// u_max ≤ 1 (measure chia hết cho 16: hai lần bắt đầu truyền trên một kênh cách nhau ≥ 16 ns)
+// và u_max_ch là một kênh hợp lệ. Dùng cấu hình quá tải (XY/t1, PIR 0.05 ≈ 4.8·PIR_max) để kênh
+// cổ chai bận gần hết cửa sổ, tránh test vô nghĩa.
+void
+TestSimUMax()
+{
+    SimConfig cfg;
+    cfg.algo = Algo::XY;
+    cfg.pattern = Pattern::Transpose1;
+    cfg.pir = 0.05;
+    cfg.warmup = 1000;
+    cfg.measure = 2000; // = 125 · 16
+    const SimResult r = RunSim(cfg);
+    const Mesh m(cfg.w, cfg.h);
+    const bool chOk = r.uMaxCh >= 0 && r.uMaxCh < m.NumChannels();
+    const std::string line = FormatResult(cfg, r);
+    const bool inResult =
+        chOk && line.find(",u_max_ch=" + m.ChannelName(r.uMaxCh) + ",") != std::string::npos;
+    Check("sim_u_max",
+          r.uMax <= 1.0 + 1e-9 && r.uMax >= 0.9 && chOk && inResult,
+          "routing=XY,traffic=transpose1,pir=0.05,measure=2000,u_max=" + Fixed(r.uMax) +
+              ",u_max_ch=" + (chOk ? m.ChannelName(r.uMaxCh) : "invalid") +
+              ",in_result=" + (inResult ? "1" : "0"));
+}
+
 // Khôi phục RngRun ban đầu khi ra khỏi phạm vi, kể cả khi test fail hay ném exception.
 class RngRunGuard
 {
@@ -1149,6 +1174,7 @@ RunSelfTest(bool forceFail)
     {
         TestSimHopsManhattan(a);
     }
+    TestSimUMax();
     const uint64_t runBefore = ns3::RngSeedManager::GetRun();
     TestSimDeterministic();
     Check("sim_rngrun_restored",
