@@ -75,6 +75,12 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
   giữ `routing=NF_WS,variant=diagnostic`; script Python đổi nhãn khi vẽ.
 - ρ_hop là giá trị dự đoán chuẩn cho mô phỏng: PIR_max, pir_ratio và U_hop đều tính từ ρ_hop.
   ρ_path chỉ để tham khảo.
+- Bước 5 (mô phỏng, 7×7): U_đo theo kênh so với U_hop có R² 0.9998, slope 0.999, RMSE 0.0033 (≈ sàn
+  nhiễu); so với U_path chỉ R² 0.964, sai số tới 0.38 (OE). Latency gãy và u_max chạm 1 tại
+  pir_ratio ≈ 1 ở cả 15 cấu hình, tức φ_hop dự đoán đúng ngưỡng nghẽn.
+- Hai báo cáo cũ: φ của họ khớp NF_WS + path (t1 = 6, t2 = 2.60), còn mô phỏng của họ (NF tốt ở t1,
+  tệ ở t2) khớp NF theo quy ước chính. Vậy họ đã dùng hai định nghĩa NF khác nhau cho φ và cho
+  mô phỏng, đúng lỗi mà quy ước "một hàm routing duy nhất" ngăn chặn.
 
 ## Mô phỏng (--mode=sim, --mode=simcheck)
 - Mô hình store-and-forward ở mức gói, queue DropTail 100000p, khác Noxim (wormhole, buffer 4 flit).
@@ -118,6 +124,20 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
   bằng regex `main[(| (]` trên toàn bộ nội dung file .cc, kể cả comment (ví dụ "remain " cũng khớp).
   CHỈ noc/noc.cc được chứa chuỗi đó; file .h không bị quét.
   Kiểm tra: `grep -l -E "main[(| ]" noc/*.cc` chỉ được ra noc/noc.cc.
+
+## Scripts (Python trong .venv; chạy từ scripts/)
+- `nocrun.py`: thư viện chung. Chọn binary theo build profile hiện tại (đọc cmake-cache), từ chối
+  profile default trừ khi có --allow-default; ghi đè được bằng NOC_BIN.
+- `link_validate.py`: U_đo theo kênh so với U_hop/U_path → results/link_validate_{summary,z}.csv,
+  report/figures/link_validate.png.
+- `sweep.py`: lưới tương đối (pir_ratio 0.1..1.3) và tuyệt đối (PIR 0.009..0.015), RngRun 1..5, chạy
+  song song, chạy tiếp được → results/sweep.csv.
+- `analyze_sweep.py`: results/saturation.csv (3 định nghĩa bão hòa), results/paired_diffs.csv, hình
+  sweep_*.png, old_reports_nf.png.
+- CRN: stream tạo gói (3·id+1, 3·id+2) không phụ thuộc routing, nên cùng (traffic, pir, RngRun) thì cùng
+  tập gói. So sánh thuật toán bằng hiệu theo cặp trên lưới tuyệt đối. Hệ quả: mọi cấu hình cùng RngRun
+  chung nhiễu tạo gói, KHÔNG coi các kênh hay cấu hình là mẫu độc lập (vd mean z của link_validate âm
+  ở RngRun 1..5 vì các run này tạo ít gói hơn kỳ vọng; ở RngRun 6..15 thì dương).
 
 ## Cách làm việc
 - Luôn đề xuất kế hoạch và danh sách file trước khi viết code; chờ tôi duyệt.
