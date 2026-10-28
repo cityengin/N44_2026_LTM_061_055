@@ -117,7 +117,9 @@ def main() -> int:
         print(f"# {errors} job lỗi; dừng", file=sys.stderr)
         return 1
 
-    raw = pd.DataFrame(chan_rows)
+    # Job xong theo thứ tự bất kỳ; sắp xếp để tổng (trung bình) tất định từng bit.
+    raw = pd.DataFrame(chan_rows).sort_values(["routing", "traffic", "ratio", "ch", "run"],
+                                              kind="mergesort").reset_index(drop=True)
     keys = ["routing", "traffic", "ratio", "ch"]
     agg = raw.groupby(keys).agg(u_meas=("u_meas", "mean"), u_meas_sd=("u_meas", "std"),
                                 u_hop=("u_hop", "first"), u_path=("u_path", "first"),
