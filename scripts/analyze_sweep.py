@@ -75,7 +75,8 @@ def crossing(x: np.ndarray, y: np.ndarray, level: float, above: bool) -> float:
     return float(x0 + (level - y0) * (x1 - x0) / (y1 - y0)) if y1 != y0 else float(x1)
 
 
-def saturation(summary: pd.DataFrame) -> pd.DataFrame:
+def saturation(summary: pd.DataFrame, rho: dict) -> pd.DataFrame:
+    """rho: ρ_hop từng kênh theo (routing, traffic), để đếm số kênh đạt φ và gần φ."""
     rel = summary[summary["grid"] == "rel"].copy()
     rel["ratio"] = rel["ratio_target"].astype(float)
     rows = []
@@ -88,6 +89,8 @@ def saturation(summary: pd.DataFrame) -> pd.DataFrame:
         pir_max = float(part["pir_max_hop"].iloc[0])
         rows.append({"routing": algo, "label": nocrun.LABELS[algo], "traffic": traffic,
                      "phi_hop": float(part["phi_hop"].iloc[0]), "pir_max_hop": pir_max,
+                     "n_at_max": len(nocrun.max_channels(rho[(algo, traffic)])),
+                     "n_near_max": len(nocrun.max_channels(rho[(algo, traffic)], 0.95)),
                      "sat_ratio_thr": r_thr, "sat_ratio_lat": r_lat, "sat_ratio_umax": r_umax,
                      "sat_pir_thr": r_thr * pir_max, "sat_pir_lat": r_lat * pir_max,
                      "sat_pir_umax": r_umax * pir_max})
@@ -143,6 +146,46 @@ def plot_rel(summary: pd.DataFrame, metric: str, ylabel: str, fname: str, log: b
     plt.close(fig)
 
 
+def plot_break_vs_near_max(sat: pd.DataFrame, fname: str) -> None:
+    """Điểm gãy (ii) lat_avg ≥ 2·16·hops_avg theo số kênh có ρ_hop ≥ 0.95·φ."""
+    markers = {"uniform": "o", "transpose1": "^", "transpose2": "s"}
+    colors = {algo: f"C{i}" for i, algo in enumerate(nocrun.ALGOS)}
+    fig, ax = plt.subplots(figsize=(9, 5.5))
+    for n, grp in sat.groupby("n_near_max"):
+        grp = grp.sort_values("sat_ratio_lat", ascending=False).reset_index(drop=True)
+        # Tách nhẹ các điểm cùng x (thang log) để không đè lên nhau.
+        for k, r in grp.iterrows():
+            x = n * (1 + 0.035 * (k - (len(grp) - 1) / 2))
+            ax.scatter(x, r["sat_ratio_lat"], marker=markers[r["traffic"]],
+                       color=colors[r["routing"]], s=55, edgecolor="black", linewidth=0.5)
+        # Gom các điểm có điểm gãy gần nhau (< 0.02) thành một khối nhãn.
+        clusters: list[list] = []
+        for _, r in grp.iterrows():
+            if clusters and abs(clusters[-1][-1]["sat_ratio_lat"] - r["sat_ratio_lat"]) < 0.02:
+                clusters[-1].append(r)
+            else:
+                clusters.append([r])
+        for cl in clusters:
+            text = "\n".join(f"{r['routing']}/{r['traffic'].replace('transpose', 't')}"
+                             f" {r['sat_ratio_lat']:.3f}" for r in cl)
+            y = float(np.mean([r["sat_ratio_lat"] for r in cl]))
+            ax.annotate(text, (n * (1 + 0.035 * len(grp) / 2), y), textcoords="offset points",
+                        xytext=(8, 0), va="center", fontsize=6.5)
+    for algo in nocrun.ALGOS:
+        ax.scatter([], [], color=colors[algo], label=nocrun.LABELS[algo])
+    for traffic, m in markers.items():
+        ax.scatter([], [], marker=m, color="gray", label=traffic)
+    ax.axhline(1.0, color="gray", ls=":", lw=1)
+    ax.set_xscale("log")
+    ax.set_xlabel("n_near_max = số kênh có ρ_hop ≥ 0.95·φ_hop (thang log)")
+    ax.set_ylabel("điểm gãy (ii): pir_ratio khi lat_avg ≥ 2·16·hops_avg")
+    ax.grid(alpha=0.3, which="both")
+    ax.legend(fontsize=7, ncol=2)
+    fig.tight_layout()
+    fig.savefig(nocrun.FIGURES / fname, dpi=150)
+    plt.close(fig)
+
+
 def plot_abs(summary: pd.DataFrame, algos: list[str], traffics: list[str], fname: str,
              title: str, old: bool = False) -> None:
     ab = summary[summary["grid"] == "abs"]
@@ -170,12 +213,14 @@ def plot_abs(summary: pd.DataFrame, algos: list[str], traffics: list[str], fname
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--sweep", default=str(nocrun.RESULTS / "sweep.csv"))
+    ap.add_argument("--allow-default", action="store_true")
     args = ap.parse_args()
 
     df = load(args.sweep)
     summary = summarize(df)
     summary.to_csv(nocrun.RESULTS / "sweep_summary.csv", index=False, float_format="%.6g")
-    sat = saturation(summary)
+    rho = nocrun.channel_pressure(nocrun.find_binary(args.allow_default), "hop")
+    sat = saturation(summary, rho)
     sat.to_csv(nocrun.RESULTS / "saturation.csv", index=False, float_format="%.4f")
     pdiff = paired(df)
     pdiff.to_csv(nocrun.RESULTS / "paired_diffs.csv", index=False, float_format="%.6g")
@@ -184,6 +229,7 @@ def main() -> int:
     plot_rel(summary, "lat_avg", "lat_avg [chu kỳ]", "sweep_latency_rel.png", log=True)
     plot_rel(summary, "thr_ratio", "throughput / offered", "sweep_throughput_rel.png")
     plot_rel(summary, "u_max", "u_max (kênh bận nhất)", "sweep_umax_rel.png", identity=True)
+    plot_break_vs_near_max(sat, "saturation_vs_nearmax.png")
     plot_abs(summary, nocrun.ALGOS, ["transpose1", "transpose2"], "sweep_latency_abs.png",
              "Latency theo PIR tuyệt đối (so với Fig. 12/13 của bài báo)")
     plot_abs(summary, ["XY", "NF", "NF_WS"], ["transpose1", "transpose2"], "old_reports_nf.png",
@@ -192,8 +238,8 @@ def main() -> int:
     pd.set_option("display.width", 220)
     fmt = lambda v: f"{v:.4f}"  # noqa: E731
     print("## Điểm bão hòa (pir_ratio; 1.0 = PIR_max_hop)")
-    print(sat[["label", "traffic", "phi_hop", "pir_max_hop", "sat_ratio_thr", "sat_ratio_lat",
-               "sat_ratio_umax"]].to_string(index=False, float_format=fmt))
+    print(sat[["label", "traffic", "phi_hop", "pir_max_hop", "n_at_max", "n_near_max",
+               "sat_ratio_thr", "sat_ratio_lat", "sat_ratio_umax"]].to_string(index=False, float_format=fmt))
 
     print("\n## Hiệu theo cặp lat_avg (lưới tuyệt đối, CRN): A − B ± CI 95% (* = có ý nghĩa)")
     lat = pdiff[pdiff["metric"] == "lat_avg"].set_index(["traffic", "pir", "a", "b"])

@@ -116,6 +116,21 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
     12 hop vượt ngưỡng nearest-rank (khoảng 5%), ngược lại rơi vào nhóm 10 hop (165–176). Đã kiểm qua
     RngRun 1..10: hàm percentile đúng, bộ tạo traffic không lệch (z gộp ≤ 1,9).
 
+## Diễn giải kết quả
+- Với mô hình store-and-forward + queue vô hạn, việc ngưỡng bão hòa bằng PIR_max gần như là hệ quả trực
+  tiếp của bảo toàn lưu lượng (tải kênh = ρ_hop·PIR·16 khi router chọn đều theo hop) cộng với điều kiện
+  ổn định (tải < 1 trên mọi kênh). Kết quả đó không phải là bằng chứng độc lập rằng φ là thước đo tốt.
+- 5b (U_đo so với U_hop/U_path) kiểm chứng cài đặt (bộ tính φ và mô phỏng nhất quán) và bác bỏ giả
+  thiết path (k/p). Nó KHÔNG chứng minh φ đúng trong mọi mô hình router.
+- Phần không hiển nhiên: vị trí "gãy" theo latency (điểm (ii), lat_avg ≥ 2·16·hops_avg) phụ thuộc số
+  kênh gần max (n_near_max = số kênh có ρ_hop ≥ 0.95·φ):
+  1 kênh (OE/t1, OE/t2) → 1.007–1.009; 4 kênh (XY, YX, NF/t2, NF_WS/t1) → 0.994–1.003, riêng OE/uniform
+  0.950; 12 kênh (NF, NF_WS thích ứng) → 0.902–0.904; 56 kênh (XY/YX uniform) → 0.822.
+  φ chỉ cho biết kênh bận nhất; latency tăng sớm hay muộn trước ngưỡng do số kênh gần max quyết định.
+  Xem report/figures/saturation_vs_nearmax.png.
+- Chưa kiểm: φ khi có backpressure (wormhole, buffer hữu hạn). Khi đó nghẽn ở một kênh lan ngược về
+  phía nguồn, nên ngưỡng thực có thể thấp hơn PIR_max.
+
 ## Lưu ý ns-3 đã biết
 - Không cài Internet stack. Gửi bằng NetDevice::Send với protocol 0x0800
   (PointToPointNetDevice chỉ map IPv4/IPv6 sang PPP).
@@ -132,8 +147,10 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
   report/figures/link_validate.png.
 - `sweep.py`: lưới tương đối (pir_ratio 0.1..1.3) và tuyệt đối (PIR 0.009..0.015), RngRun 1..5, chạy
   song song, chạy tiếp được → results/sweep.csv.
-- `analyze_sweep.py`: results/saturation.csv (3 định nghĩa bão hòa), results/paired_diffs.csv, hình
-  sweep_*.png, old_reports_nf.png.
+- `analyze_sweep.py`: results/saturation.csv (3 định nghĩa bão hòa, n_at_max, n_near_max),
+  results/paired_diffs.csv, hình sweep_*.png, old_reports_nf.png, saturation_vs_nearmax.png.
+- `heatmap.py`: heatmap_pred.png (U_hop) và heatmap_meas.png (U_đo) tại pir_ratio 0.9, đọc
+  results/link_validate_channels.csv (chạy link_validate.py trước).
 - CRN: stream tạo gói (3·id+1, 3·id+2) không phụ thuộc routing, nên cùng (traffic, pir, RngRun) thì cùng
   tập gói. So sánh thuật toán bằng hiệu theo cặp trên lưới tuyệt đối. Hệ quả: mọi cấu hình cùng RngRun
   chung nhiễu tạo gói, KHÔNG coi các kênh hay cấu hình là mẫu độc lập (vd mean z của link_validate âm
