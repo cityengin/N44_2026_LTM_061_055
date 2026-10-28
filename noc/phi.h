@@ -50,6 +50,22 @@ PhiResult MaxPressure(const std::vector<double>& rho);
 // PIR tối đa không nghẽn (công thức 6 của bài báo): frate/len/φ = 0.0625/φ.
 double PirMax(double phi);
 
+// Lưu lượng theo phương pháp hop chảy từ cổng vào sang kênh ra, tính từ cùng cây tìm kiếm với ρ.
+// Cổng vào là một kênh, hoặc "local" (gói vào mạng tại nguồn). Bảo toàn:
+//   Σ_in Rate(in, c) = ρ_hop(c);   Σ_out Rate(c, out) + term[c] = ρ_hop(c).
+struct TurnFlows
+{
+    static constexpr int kLocal = -1;
+
+    int nch = 0;
+    std::vector<double> rate; // chỉ số (in + 1)·nch + out
+    std::vector<double> term; // lưu lượng kết thúc tại đích ngay sau kênh c
+
+    double Rate(int in, int out) const { return rate[(in + 1) * nch + out]; }
+};
+
+TurnFlows ComputeTurnFlows(Algo algo, const Mesh& mesh, const std::vector<Flow>& flows);
+
 struct PhiOptions
 {
     std::string routing = "all"; // all | XY | YX | NF | NF_WS | OE | FULL
@@ -58,6 +74,7 @@ struct PhiOptions
     int w = 7;
     int h = 7;
     bool channels = false; // in thêm ρ từng kênh (dòng CHAN)
+    bool turns = false;    // in thêm lưu lượng hop từ cổng vào sang kênh ra (dòng PHITURN)
 };
 
 // --mode=phi: bảng routing × traffic × method gồm φ, kênh cổ chai, PIR_max, kèm dòng RESULT.

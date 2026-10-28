@@ -24,4 +24,13 @@ Short(double v)
     return ss.str();
 }
 
+// digits chữ số có nghĩa (cho các giá trị nhỏ như lưu lượng uniform đã chia N−1).
+inline std::string
+Sig(double v, int digits = 10)
+{
+    std::ostringstream ss;
+    ss << std::setprecision(digits) << v;
+    return ss.str();
+}
+
 } // namespace noc
