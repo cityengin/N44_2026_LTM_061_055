@@ -1,7 +1,9 @@
 #include "noc-sim.h"
 
+#include "format.h"
 #include "noc-header.h"
 #include "noc-router.h"
+#include "phi.h"
 
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
@@ -10,6 +12,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <unordered_map>
@@ -18,6 +21,24 @@ namespace noc
 {
 
 using namespace ns3;
+
+namespace
+{
+
+// Số chu kỳ tới lần tạo gói kế tiếp (≥ 1): khoảng cách hình học của Bernoulli(p) mỗi chu kỳ.
+int64_t
+GeometricGap(double p, const Ptr<UniformRandomVariable>& rv)
+{
+    if (p >= 1.0)
+    {
+        return 1;
+    }
+    const double u = 1.0 - rv->GetValue(); // (0, 1]
+    const auto g = static_cast<int64_t>(std::ceil(std::log(u) / std::log1p(-p)));
+    return std::max<int64_t>(g, 1);
+}
+
+} // namespace
 
 SimResult
 RunSim(const SimConfig& cfg)
@@ -31,6 +52,16 @@ RunSim(const SimConfig& cfg)
     res.seed = RngSeedManager::GetSeed();
     res.run = RngSeedManager::GetRun();
     res.chanTx.assign(mesh.NumChannels(), 0);
+
+    const std::vector<Flow> flows = MakeFlows(cfg.pattern, mesh);
+    const ChannelPressure cp = ComputePressure(cfg.algo, mesh, flows);
+    const double norm = NormFactor(cfg.pattern, mesh);
+    for (int ch = 0; ch < mesh.NumChannels(); ++ch)
+    {
+        res.rhoHop.push_back(cp.hop[ch] * norm);
+        res.rhoPath.push_back(cp.path[ch] * norm);
+    }
+    res.phiHop = MaxPressure(res.rhoHop).phi;
 
     NodeContainer nodes;
     nodes.Create(n);
@@ -143,6 +174,49 @@ RunSim(const SimConfig& cfg)
         Simulator::Schedule(NanoSeconds(inj.timeNs), [&create, inj]() { create(inj.src, inj.dst); });
     }
 
+    // Bộ tạo traffic: mỗi chu kỳ mỗi node phát với xác suất PIR (Bernoulli), cài bằng khoảng cách
+    // hình học. Node tự map vào chính nó không phát. Vẫn phát trong pha drain.
+    std::vector<int> fixedDst(n, -1); // transpose: đích cố định
+    std::vector<char> sends(n, 0);
+    for (const Flow& f : flows)
+    {
+        sends[f.src] = 1;
+        fixedDst[f.src] = f.dst;
+    }
+    std::vector<Ptr<UniformRandomVariable>> gapRv(n);
+    std::vector<Ptr<UniformRandomVariable>> dstRv(n);
+    for (int id = 0; id < n; ++id)
+    {
+        gapRv[id] = CreateObject<UniformRandomVariable>();
+        gapRv[id]->SetStream(3 * id + 1);
+        dstRv[id] = CreateObject<UniformRandomVariable>();
+        dstRv[id]->SetStream(3 * id + 2);
+    }
+    std::function<void(int)> generate = [&](int src) {
+        int dst = fixedDst[src];
+        if (cfg.pattern == Pattern::Uniform)
+        {
+            const int r = static_cast<int>(dstRv[src]->GetInteger(0, n - 2));
+            dst = r >= src ? r + 1 : r;
+        }
+        create(src, dst);
+        Simulator::Schedule(NanoSeconds(GeometricGap(cfg.pir, gapRv[src])), [&generate, src]() {
+            generate(src);
+        });
+    };
+    if (cfg.injections.empty() && cfg.pir > 0.0)
+    {
+        for (int id = 0; id < n; ++id)
+        {
+            if (sends[id])
+            {
+                // Lần thử Bernoulli đầu tiên ở chu kỳ 0, nên lần phát đầu ở chu kỳ G − 1.
+                const int64_t first = GeometricGap(cfg.pir, gapRv[id]) - 1;
+                Simulator::Schedule(NanoSeconds(first), [&generate, id]() { generate(id); });
+            }
+        }
+    }
+
     Simulator::Schedule(NanoSeconds(winEnd), [&pending]() {
         if (pending.empty())
         {
@@ -186,6 +260,60 @@ RunSim(const SimConfig& cfg)
 
     Simulator::Destroy();
     return res;
+}
+
+namespace
+{
+
+std::string
+SimKey(const SimConfig& cfg, const SimResult& r)
+{
+    const std::string variant = VariantName(cfg.algo);
+    return std::string("routing=") + AlgoName(cfg.algo) +
+           (variant.empty() ? "" : ",variant=" + variant) + ",traffic=" + PatternName(cfg.pattern) +
+           ",mesh=" + std::to_string(cfg.w) + "x" + std::to_string(cfg.h) +
+           ",pir=" + Short(cfg.pir) + ",seed=" + std::to_string(r.seed) +
+           ",run=" + std::to_string(r.run);
+}
+
+} // namespace
+
+std::string
+FormatResult(const SimConfig& cfg, const SimResult& r)
+{
+    const double pirMax = PirMax(r.phiHop);
+    return "RESULT,mode=sim," + SimKey(cfg, r) + ",warmup=" + std::to_string(cfg.warmup) +
+           ",measure=" + std::to_string(cfg.measure) + ",drain=" + std::to_string(cfg.drain) +
+           ",generated=" + std::to_string(r.generated) + ",delivered=" +
+           std::to_string(r.delivered) + ",undelivered=" + std::to_string(r.undelivered) +
+           ",saturated=" + (r.saturated ? "1" : "0") + ",drops=" + std::to_string(r.drops) +
+           ",hop_mismatch=" + std::to_string(r.hopMismatch) + ",lat_avg=" + Fixed(r.latAvg) +
+           ",lat_avg_lb=" + Fixed(r.latAvgLb) + ",lat_p95=" + Fixed(r.latP95) +
+           ",hops_avg=" + Fixed(r.hopsAvg) + ",throughput=" + Fixed(r.throughput) +
+           ",offered=" + Fixed(r.offered) + ",phi_hop=" + Fixed(r.phiHop) +
+           ",pir_max_hop=" + Fixed(pirMax) + ",pir_ratio=" + Fixed(cfg.pir / pirMax) +
+           ",stop=" + std::to_string(r.stopNs);
+}
+
+void
+RunSimMode(const SimConfig& cfg, std::ostream& os)
+{
+    const SimResult r = RunSim(cfg);
+    os << FormatResult(cfg, r) << "\n";
+    if (!cfg.channels)
+    {
+        return;
+    }
+    const Mesh mesh(cfg.w, cfg.h);
+    const std::string key = SimKey(cfg, r);
+    const double perPacket = kCyclesPerPacket;
+    for (int ch = 0; ch < mesh.NumChannels(); ++ch)
+    {
+        os << "SIMCHAN," << key << ",ch=" << mesh.ChannelName(ch) << ",tx=" << r.chanTx[ch]
+           << ",u_meas=" << Fixed(r.chanTx[ch] * perPacket / cfg.measure)
+           << ",u_hop=" << Fixed(r.rhoHop[ch] * cfg.pir * perPacket)
+           << ",u_path=" << Fixed(r.rhoPath[ch] * cfg.pir * perPacket) << "\n";
+    }
 }
 
 } // namespace noc

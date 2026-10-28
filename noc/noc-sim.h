@@ -5,6 +5,8 @@
 #include "traffic.h"
 
 #include <cstdint>
+#include <ostream>
+#include <string>
 #include <vector>
 
 namespace noc
@@ -57,8 +59,19 @@ struct SimResult
     uint32_t maxFrame = 0;
     std::vector<long> chanTx;       // số gói bắt đầu truyền trên từng kênh trong cửa sổ đo
     std::vector<int64_t> txStartNs; // thời điểm PhyTxBegin của tối đa 64 lần truyền đầu tiên
+
+    // Dự đoán từ bộ tính φ (cùng routeSet), đã chuẩn hóa: uniform chia N−1.
+    std::vector<double> rhoHop;
+    std::vector<double> rhoPath;
+    double phiHop = 0.0;
 };
 
 SimResult RunSim(const SimConfig& cfg);
+
+// Dòng RESULT,mode=sim,... (không có xuống dòng).
+std::string FormatResult(const SimConfig& cfg, const SimResult& r);
+
+// --mode=sim: chạy một lần, in dòng RESULT và (nếu cfg.channels) các dòng SIMCHAN.
+void RunSimMode(const SimConfig& cfg, std::ostream& os);
 
 } // namespace noc

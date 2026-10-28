@@ -1,6 +1,7 @@
 #include "selftest.h"
 
 #include "cdg.h"
+#include "format.h"
 #include "noc-header.h"
 #include "noc-sim.h"
 #include "phi.h"
@@ -14,6 +15,7 @@
 #include "ns3/data-rate.h"
 #include "ns3/packet.h"
 #include "ns3/random-variable-stream.h"
+#include "ns3/rng-seed-manager.h"
 
 #include <array>
 #include <cmath>
@@ -87,22 +89,6 @@ AlgoTag(Algo algo)
         tag += ",variant=" + variant;
     }
     return tag;
-}
-
-std::string
-Fixed(double v)
-{
-    std::ostringstream ss;
-    ss << std::fixed << std::setprecision(6) << v;
-    return ss.str();
-}
-
-std::string
-Short(double v)
-{
-    std::ostringstream ss;
-    ss << v;
-    return ss.str();
 }
 
 std::string
@@ -965,6 +951,66 @@ TestSimFrame32()
               ",delivered=" + std::to_string(r.delivered) + ",drops=" + std::to_string(r.drops));
 }
 
+// Mọi gói tới đích có hops == khoảng cách Manhattan (uniform, PIR 0.01, cửa sổ ngắn).
+void
+TestSimHopsManhattan(Algo algo)
+{
+    SimConfig cfg;
+    cfg.algo = algo;
+    cfg.pattern = Pattern::Uniform;
+    cfg.pir = 0.01;
+    cfg.warmup = 0;
+    cfg.measure = 2000;
+    const SimResult r = RunSim(cfg);
+    Check("sim_hops_manhattan",
+          r.delivered > 0 && r.hopMismatch == 0,
+          AlgoTag(algo) + ",traffic=uniform,pir=0.01,delivered=" + std::to_string(r.delivered) +
+              ",hop_mismatch=" + std::to_string(r.hopMismatch) +
+              ",hops_avg=" + Fixed(r.hopsAvg));
+}
+
+// Khôi phục RngRun ban đầu khi ra khỏi phạm vi, kể cả khi test fail hay ném exception.
+class RngRunGuard
+{
+  public:
+    RngRunGuard()
+        : m_run(ns3::RngSeedManager::GetRun())
+    {
+    }
+
+    ~RngRunGuard() { ns3::RngSeedManager::SetRun(m_run); }
+
+    RngRunGuard(const RngRunGuard&) = delete;
+    RngRunGuard& operator=(const RngRunGuard&) = delete;
+
+  private:
+    uint64_t m_run;
+};
+
+// Cùng RngRun → dòng RESULT giống hệt; khác RngRun → khác (đối chứng âm).
+void
+TestSimDeterministic()
+{
+    const RngRunGuard guard;
+    SimConfig cfg;
+    cfg.algo = Algo::OE;
+    cfg.pattern = Pattern::Uniform;
+    cfg.pir = 0.02;
+    cfg.warmup = 200;
+    cfg.measure = 2000;
+    auto runWith = [&cfg](uint64_t run) {
+        ns3::RngSeedManager::SetRun(run);
+        return FormatResult(cfg, RunSim(cfg));
+    };
+    const std::string a = runWith(7);
+    const std::string b = runWith(7);
+    const std::string c = runWith(8);
+    Check("sim_deterministic",
+          a == b && a != c,
+          std::string("routing=OE,traffic=uniform,run_same=7,run_other=8,same_equal=") +
+              (a == b ? "1" : "0") + ",other_differs=" + (a != c ? "1" : "0"));
+}
+
 } // namespace
 
 int
@@ -1040,6 +1086,16 @@ RunSelfTest(bool forceFail)
     TestSelectUniform();
     TestSimSinglePacket();
     TestSimFrame32();
+    for (Algo a : {Algo::XY, Algo::YX, Algo::NF, Algo::NF_WS, Algo::OE})
+    {
+        TestSimHopsManhattan(a);
+    }
+    const uint64_t runBefore = ns3::RngSeedManager::GetRun();
+    TestSimDeterministic();
+    Check("sim_rngrun_restored",
+          ns3::RngSeedManager::GetRun() == runBefore,
+          "run=" + std::to_string(ns3::RngSeedManager::GetRun()) +
+              ",expect=" + std::to_string(runBefore));
 
     if (forceFail)
     {

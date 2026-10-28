@@ -1,5 +1,6 @@
 #include "phi.h"
 
+#include "format.h"
 #include "searchtree.h"
 
 #include <algorithm>
@@ -89,14 +90,6 @@ PirMax(double phi)
 
 namespace
 {
-
-std::string
-Fixed(double v, int digits = 6)
-{
-    std::ostringstream ss;
-    ss << std::fixed << std::setprecision(digits) << v;
-    return ss.str();
-}
 
 std::string
 JoinChannels(const Mesh& mesh, const std::vector<int>& chans)
