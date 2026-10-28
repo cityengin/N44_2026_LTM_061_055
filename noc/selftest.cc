@@ -2,6 +2,7 @@
 
 #include "cdg.h"
 #include "noc-header.h"
+#include "noc-sim.h"
 #include "phi.h"
 #include "routing.h"
 #include "searchtree.h"
@@ -10,6 +11,7 @@
 #include "topology.h"
 #include "traffic.h"
 
+#include "ns3/data-rate.h"
 #include "ns3/packet.h"
 #include "ns3/random-variable-stream.h"
 
@@ -908,6 +910,61 @@ TestSelectUniform()
               ",S=" + std::to_string(count[3]));
 }
 
+// ---------------------------------------------------------------- mô phỏng ns-3
+
+// Một gói duy nhất 0→48 với XY: 12 hop × 16 ns = 192 ns. Nếu sai thì in thời gian từng hop
+// đo được và thời gian truyền 32 B mà DataRate tính ra (nghi làm tròn). Không nới sai số.
+void
+TestSimSinglePacket()
+{
+    SimConfig cfg;
+    cfg.algo = Algo::XY;
+    cfg.warmup = 0;
+    cfg.measure = 1;
+    cfg.drain = 10000;
+    cfg.injections = {{0, 0, 48}};
+    const SimResult r = RunSim(cfg);
+    const bool ok = r.generated == 1 && r.delivered == 1 && r.latAvg == 192.0 && r.hopMismatch == 0;
+    std::string detail = "routing=XY,src=0,dst=48,hops=" + Short(r.hopsAvg) +
+                         ",latency=" + Short(r.latAvg) + ",expect=192";
+    if (!ok)
+    {
+        std::string perHop;
+        for (std::size_t i = 0; i < r.txStartNs.size(); ++i)
+        {
+            const double next =
+                i + 1 < r.txStartNs.size() ? r.txStartNs[i + 1] : r.latAvg; // tạo lúc 0
+            perHop += (perHop.empty() ? "" : ";") + Short(next - r.txStartNs[i]);
+        }
+        const ns3::Time tx = ns3::DataRate("16Gbps").CalculateBytesTxTime(kFrameBytes);
+        detail += ",per_hop_ns=" + perHop + ",tx_time_32B_ps=" + std::to_string(tx.GetPicoSeconds());
+    }
+    Check("sim_single_packet", ok, detail);
+}
+
+// Mọi frame trên dây đúng 32 B (PhyTxBegin cũng abort nếu sai).
+void
+TestSimFrame32()
+{
+    SimConfig cfg;
+    cfg.algo = Algo::OE;
+    cfg.warmup = 0;
+    cfg.measure = 1;
+    const Mesh m(cfg.w, cfg.h);
+    for (const Flow& f : MakeFlows(Pattern::Transpose1, m))
+    {
+        cfg.injections.push_back({0, f.src, f.dst});
+    }
+    const SimResult r = RunSim(cfg);
+    const bool ok = r.minFrame == kFrameBytes && r.maxFrame == kFrameBytes &&
+                    r.delivered == r.generated && r.generated == 42 && r.drops == 0;
+    Check("sim_frame_32",
+          ok,
+          "routing=OE,packets=" + std::to_string(r.generated) +
+              ",min_frame=" + std::to_string(r.minFrame) + ",max_frame=" + std::to_string(r.maxFrame) +
+              ",delivered=" + std::to_string(r.delivered) + ",drops=" + std::to_string(r.drops));
+}
+
 } // namespace
 
 int
@@ -981,6 +1038,8 @@ RunSelfTest(bool forceFail)
     TestHeaderTagRoundtrip();
     TestNthDir();
     TestSelectUniform();
+    TestSimSinglePacket();
+    TestSimFrame32();
 
     if (forceFail)
     {
