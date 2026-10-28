@@ -9,6 +9,12 @@ docs/ chỉ để tham khảo các lỗi đã mắc, không sao chép.
 - Build: `cd ~/ns-3-dev && ./ns3 build noc`
 - Chạy: `./ns3 run --no-build "noc --mode=phi --routing=OE --traffic=transpose1"`
 - Cờ ẩn `--selftest-force-fail`: thêm một test HARD luôn fail (selftest phải thoát mã 1), dùng để kiểm tra exit code.
+- Build profile: **release** (`./ns3 configure --build-profile=release --enable-examples`): -O3, không
+  -march=native. KHÔNG dùng `optimized`: trong ns-3.48 nó bật NS3_NATIVE_OPTIMIZATIONS
+  (-march=native -mtune=native), có thể sinh FMA làm kết quả lệch từng byte giữa các máy.
+  Binary release không có hậu tố: `build/scratch/noc/ns3.48-noc`. NS_ASSERT/NS_LOG tắt, NS_ABORT vẫn chạy.
+  Đã kiểm: selftest, simcheck, phi và các dòng RESULT mẫu giống hệt từng byte so với profile default.
+  Quay lại profile default: `./ns3 configure --build-profile=default --enable-examples`.
 - C++ theo chuẩn mặc định của ns-3.48 (CMake của ns-3 đặt tối thiểu C++23), không thêm thư viện ngoài.
   Python dùng ~/noc-routing-pressure/.venv.
 
