@@ -6,5 +6,6 @@ results/*.csv
 !results/link_validate_channels.csv
 !results/saturation.csv
 !results/paired_diffs.csv
+!results/mdl_predict.csv
 !results/sweep.csv
 results/*.log

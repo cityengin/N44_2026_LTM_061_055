@@ -132,6 +132,22 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
   Xem report/figures/saturation_vs_nearmax.png và model ở bước 6b.
 - Chưa kiểm: φ khi có backpressure (wormhole, buffer hữu hạn). Khi đó nghẽn ở một kênh lan ngược về
   phía nguồn, nên ngưỡng thực có thể thấp hơn PIR_max.
+- Model giải tích (bước 6b, scripts/mdl_predict.py): xấp xỉ **Kleinrock independence + M/D/1**. Mỗi kênh
+  là một hàng đợi M/D/1 độc lập (luồng đến Poisson λ = ρ_hop·PIR, phục vụ 16 chu kỳ):
+  W = U·16/(2(1−U)), lat_pred = 16·hops_avg + Σ λ·W / Λ.
+  - Dự đoán trước khi chạy: model sẽ ước lượng cao, vì trong chuỗi hàng đợi nối tiếp (tandem) với thời
+    gian phục vụ cố định, gói ra khỏi một kênh đã cách nhau ≥ 16 chu kỳ, nên ít va nhau ở kênh sau hơn
+    so với giả thiết Poisson.
+  - Thực tế: đúng dấu, model cao hơn ở mọi cấu hình và mọi pir_ratio. Phần chờ (bỏ 16·hops) bị ước lượng
+    cao 1.4–2.1 lần với uniform, routing thích ứng và OE; 3.5–4.7 lần với routing tất định trên transpose
+    (XY, YX, NF/t2, NF_WS/t1), nơi luồng đi theo đường cố định nên hiệu ứng giãn gói mạnh nhất. Ở PIR 0.001
+    (XY/t1, t2): dự đoán 2.56 chu kỳ so với 0.48–0.68 đo được. Sai số latency tổng: +1–3% ở ratio 0.1,
+    tới +14–60% ở ratio 0.9.
+  - knee_pred (cột trong saturation.csv) luôn sớm hơn (ii) 0.03–0.11. Model giữ đúng thứ tự giữa các nhóm
+    56 kênh (0.749 so với 0.822) < 12 kênh (0.848–0.866 so với 0.902–0.904) < 1 kênh (0.976 so với
+    1.007–1.009), nhưng KHÔNG tái hiện điểm lệch OE/uniform: model xếp OE/uniform (0.919) sau nhóm tất
+    định trên transpose (0.893), trong khi mô phỏng thì ngược lại (0.950 so với 0.994–1.003). Lý do: model
+    ước lượng cao nhiều nhất đúng ở nhóm tất định trên transpose.
 
 ## Lưu ý ns-3 đã biết
 - Không cài Internet stack. Gửi bằng NetDevice::Send với protocol 0x0800
@@ -152,7 +168,10 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
 - `analyze_sweep.py`: results/saturation.csv (3 định nghĩa bão hòa, n_at_max, n_near_max),
   results/paired_diffs.csv, hình sweep_*.png, old_reports_nf.png, saturation_vs_nearmax.png.
 - `heatmap.py`: heatmap_pred.png (U_hop) và heatmap_meas.png (U_đo) tại pir_ratio 0.9, đọc
-  results/link_validate_channels.csv (chạy link_validate.py trước).
+  results/link_validate_channels.csv.
+- `mdl_predict.py`: model Kleinrock + M/D/1 so với sweep → results/mdl_predict.csv,
+  report/figures/mdl_predict.png. analyze_sweep.py import hàm knee_for của nó để thêm cột knee_pred, nên
+  thứ tự chạy là analyze_sweep.py rồi mdl_predict.py.
 - CRN: stream tạo gói (3·id+1, 3·id+2) không phụ thuộc routing, nên cùng (traffic, pir, RngRun) thì cùng
   tập gói. So sánh thuật toán bằng hiệu theo cặp trên lưới tuyệt đối. Hệ quả: mọi cấu hình cùng RngRun
   chung nhiễu tạo gói, KHÔNG coi các kênh hay cấu hình là mẫu độc lập (vd mean z của link_validate âm
