@@ -54,12 +54,18 @@ NoCommas(std::string s)
 std::string
 AlgoTag(Algo algo)
 {
-    std::string tag = std::string("algo=") + AlgoName(algo);
+    std::string tag = std::string("routing=") + AlgoName(algo);
     if (IsDiagnostic(algo))
     {
         tag += ",variant=diagnostic";
     }
     return tag;
+}
+
+std::string
+MeshTag(const Mesh& m)
+{
+    return "mesh=" + std::to_string(m.W()) + "x" + std::to_string(m.H());
 }
 
 std::string
@@ -82,6 +88,21 @@ Binom(int n, int k)
         r = r * (n - k + i) / i;
     }
     return r;
+}
+
+// R(x, y) = (x, H−1−y): lật trục dọc.
+int
+Mirror(const Mesh& m, int id)
+{
+    const Coord c = m.ToCoord(id);
+    return m.ToId(c.x, m.H() - 1 - c.y);
+}
+
+const std::vector<Mesh>&
+TestMeshes()
+{
+    static const std::vector<Mesh> meshes{Mesh(3, 3), Mesh(7, 7)};
+    return meshes;
 }
 
 // ---------------------------------------------------------------- topology
@@ -184,89 +205,77 @@ TestAlgoNames()
     Check("algo_names", ok && threw);
 }
 
-const std::vector<Mesh>&
-TestMeshes()
-{
-    static const std::vector<Mesh> meshes{Mesh(3, 3), Mesh(7, 7)};
-    return meshes;
-}
-
-const char* kSizes = "sizes=3x3+7x7";
-
 // (a), (b): chỉ xét các node đi tới được từ src khi đi theo routeSet.
 void
-TestReachableStates(Algo algo)
+TestReachableStates(Algo algo, const Mesh& m)
 {
     long pairs = 0;
     long states = 0;
     std::string emptyFail;
     std::string minimalFail;
-    for (const Mesh& m : TestMeshes())
+    for (int src = 0; src < m.NumNodes(); ++src)
     {
-        for (int src = 0; src < m.NumNodes(); ++src)
+        for (int dst = 0; dst < m.NumNodes(); ++dst)
         {
-            for (int dst = 0; dst < m.NumNodes(); ++dst)
+            if (src == dst)
             {
-                if (src == dst)
+                continue;
+            }
+            ++pairs;
+            std::vector<char> seen(m.NumNodes(), 0);
+            std::vector<int> stack{src};
+            seen[src] = 1;
+            while (!stack.empty())
+            {
+                const int cur = stack.back();
+                stack.pop_back();
+                ++states;
+                const DirSet s = routeSet(algo, m.ToCoord(cur), m.ToCoord(src), m.ToCoord(dst));
+                const std::string where = "src=" + std::to_string(src) +
+                                          ",dst=" + std::to_string(dst) +
+                                          ",cur=" + std::to_string(cur) +
+                                          ",set=" + std::to_string(s);
+                if ((s == 0) != (cur == dst) && emptyFail.empty())
                 {
-                    continue;
+                    emptyFail = where;
                 }
-                ++pairs;
-                std::vector<char> seen(m.NumNodes(), 0);
-                std::vector<int> stack{src};
-                seen[src] = 1;
-                while (!stack.empty())
+                if ((s & ~kAllLinkDirs) != 0 && minimalFail.empty())
                 {
-                    const int cur = stack.back();
-                    stack.pop_back();
-                    ++states;
-                    const DirSet s = routeSet(algo, m.ToCoord(cur), m.ToCoord(src), m.ToCoord(dst));
-                    const std::string where = "W=" + std::to_string(m.W()) + ",src=" +
-                                              std::to_string(src) + ",dst=" + std::to_string(dst) +
-                                              ",cur=" + std::to_string(cur) +
-                                              ",set=" + std::to_string(s);
-                    if ((s == 0) != (cur == dst) && emptyFail.empty())
+                    minimalFail = where + ",reason=bit_ngoai_E_W_N_S";
+                }
+                for (Dir d : kDirOrder)
+                {
+                    if (!Has(s, d))
                     {
-                        emptyFail = where;
+                        continue;
                     }
-                    if ((s & ~kAllLinkDirs) != 0 && minimalFail.empty())
+                    const int next = m.Neighbor(cur, d);
+                    if (next < 0)
                     {
-                        minimalFail = where + ",reason=bit_ngoai_E_W_N_S";
+                        if (minimalFail.empty())
+                        {
+                            minimalFail = where + ",dir=" + DirName(d) + ",reason=ra_ngoai_luoi";
+                        }
+                        continue;
                     }
-                    for (Dir d : kDirOrder)
+                    if (m.Distance(next, dst) != m.Distance(cur, dst) - 1)
                     {
-                        if (!Has(s, d))
+                        if (minimalFail.empty())
                         {
-                            continue;
+                            minimalFail = where + ",dir=" + DirName(d) + ",reason=khong_giam_1";
                         }
-                        const int next = m.Neighbor(cur, d);
-                        if (next < 0)
-                        {
-                            if (minimalFail.empty())
-                            {
-                                minimalFail = where + ",dir=" + DirName(d) + ",reason=ra_ngoai_luoi";
-                            }
-                            continue;
-                        }
-                        if (m.Distance(next, dst) != m.Distance(cur, dst) - 1)
-                        {
-                            if (minimalFail.empty())
-                            {
-                                minimalFail = where + ",dir=" + DirName(d) + ",reason=khong_giam_1";
-                            }
-                            continue;
-                        }
-                        if (!seen[next])
-                        {
-                            seen[next] = 1;
-                            stack.push_back(next);
-                        }
+                        continue;
+                    }
+                    if (!seen[next])
+                    {
+                        seen[next] = 1;
+                        stack.push_back(next);
                     }
                 }
             }
         }
     }
-    const std::string base = AlgoTag(algo) + "," + kSizes + ",pairs=" + std::to_string(pairs) +
+    const std::string base = AlgoTag(algo) + "," + MeshTag(m) + ",pairs=" + std::to_string(pairs) +
                              ",states=" + std::to_string(states);
     Check("route_empty_iff_dst", emptyFail.empty(), base + (emptyFail.empty() ? "" : "," + emptyFail));
     Check("route_minimal_in_mesh",
@@ -403,7 +412,7 @@ ExpectedPaths(Algo algo, int dx, int dy)
 
 // (c), (d), (e) và Σ hopProb = 1, từ cùng một lần liệt kê đường cho mọi cặp src≠dst.
 void
-TestPaths(Algo algo)
+TestPaths(Algo algo, const Mesh& m)
 {
     long pairs = 0;
     long paths = 0;
@@ -415,49 +424,44 @@ TestPaths(Algo algo)
     std::string error;
     try
     {
-        for (const Mesh& m : TestMeshes())
+        for (int src = 0; src < m.NumNodes(); ++src)
         {
-            for (int src = 0; src < m.NumNodes(); ++src)
+            for (int dst = 0; dst < m.NumNodes(); ++dst)
             {
-                for (int dst = 0; dst < m.NumNodes(); ++dst)
+                if (src == dst)
                 {
-                    if (src == dst)
+                    continue;
+                }
+                ++pairs;
+                long count = 0;
+                double hopSum = 0.0;
+                const std::string pair = "src=" + std::to_string(src) + ",dst=" + std::to_string(dst);
+                ForEachPath(algo, m, src, dst, [&](const std::vector<int>& nodes, double prob) {
+                    ++count;
+                    hopSum += prob;
+                    const int len = static_cast<int>(nodes.size()) - 1;
+                    if (len != m.Distance(src, dst) && lenFail.empty())
                     {
-                        continue;
+                        lenFail = pair + ",len=" + std::to_string(len) + ",path=" + PathString(nodes);
                     }
-                    ++pairs;
-                    long count = 0;
-                    double hopSum = 0.0;
-                    const std::string pair = "W=" + std::to_string(m.W()) + ",src=" +
-                                             std::to_string(src) + ",dst=" + std::to_string(dst);
-                    ForEachPath(algo, m, src, dst, [&](const std::vector<int>& nodes, double prob) {
-                        ++count;
-                        hopSum += prob;
-                        const int len = static_cast<int>(nodes.size()) - 1;
-                        if (len != m.Distance(src, dst) && lenFail.empty())
-                        {
-                            lenFail = pair + ",len=" + std::to_string(len) +
-                                      ",path=" + PathString(nodes);
-                        }
-                        const std::string bad = ScanTurns(algo, m, nodes, turns);
-                        if (!bad.empty() && turnFail.empty())
-                        {
-                            turnFail = pair + "," + bad;
-                        }
-                    });
-                    paths += count;
-                    const Coord s = m.ToCoord(src);
-                    const Coord d = m.ToCoord(dst);
-                    const long expect = ExpectedPaths(algo, d.x - s.x, d.y - s.y);
-                    if (expect >= 0 && count != expect && countFail.empty())
+                    const std::string bad = ScanTurns(algo, m, nodes, turns);
+                    if (!bad.empty() && turnFail.empty())
                     {
-                        countFail = pair + ",got=" + std::to_string(count) +
-                                    ",expect=" + std::to_string(expect);
+                        turnFail = pair + "," + bad;
                     }
-                    if (std::abs(hopSum - 1.0) > 1e-9 && hopFail.empty())
-                    {
-                        hopFail = pair + ",sum=" + std::to_string(hopSum);
-                    }
+                });
+                paths += count;
+                const Coord s = m.ToCoord(src);
+                const Coord d = m.ToCoord(dst);
+                const long expect = ExpectedPaths(algo, d.x - s.x, d.y - s.y);
+                if (expect >= 0 && count != expect && countFail.empty())
+                {
+                    countFail =
+                        pair + ",got=" + std::to_string(count) + ",expect=" + std::to_string(expect);
+                }
+                if (std::abs(hopSum - 1.0) > 1e-9 && hopFail.empty())
+                {
+                    hopFail = pair + ",sum=" + std::to_string(hopSum);
                 }
             }
         }
@@ -471,7 +475,7 @@ TestPaths(Algo algo)
         const std::string& why = error.empty() ? fail : error;
         Check(test,
               why.empty(),
-              AlgoTag(algo) + "," + kSizes + ",pairs=" + std::to_string(pairs) +
+              AlgoTag(algo) + "," + MeshTag(m) + ",pairs=" + std::to_string(pairs) +
                   ",paths=" + std::to_string(paths) + extra + (why.empty() ? "" : "," + why));
     };
     report("path_len_manhattan", lenFail, "");
@@ -512,7 +516,44 @@ TestTurnRulesNegative(Algo algo)
     }
     Check("turn_rules_negative_control",
           violating > 0,
-          AlgoTag(algo) + ",paths_from=FULL,W=7,violating_paths=" + std::to_string(violating));
+          AlgoTag(algo) + ",paths_from=FULL," + MeshTag(m) +
+              ",violating_paths=" + std::to_string(violating));
+}
+
+// Đối xứng qua R: số đường NF(s,d) == số đường NF_WS(R(s),R(d)) với mọi cặp.
+void
+TestMirrorPathCounts(const Mesh& m)
+{
+    long pairs = 0;
+    std::string fail;
+    try
+    {
+        for (int src = 0; src < m.NumNodes(); ++src)
+        {
+            for (int dst = 0; dst < m.NumNodes(); ++dst)
+            {
+                if (src == dst)
+                {
+                    continue;
+                }
+                ++pairs;
+                const long a = CountPaths(Algo::NF, m, src, dst);
+                const long b = CountPaths(Algo::NF_WS, m, Mirror(m, src), Mirror(m, dst));
+                if (a != b && fail.empty())
+                {
+                    fail = "src=" + std::to_string(src) + ",dst=" + std::to_string(dst) +
+                           ",nf=" + std::to_string(a) + ",nf_ws_mirror=" + std::to_string(b);
+                }
+            }
+        }
+    }
+    catch (const std::exception& e)
+    {
+        fail = "exception=" + NoCommas(e.what());
+    }
+    Check("mirror_path_count_nf_nfws",
+          fail.empty(),
+          MeshTag(m) + ",pairs=" + std::to_string(pairs) + (fail.empty() ? "" : "," + fail));
 }
 
 // Mốc của bài báo: số đường 0→48 trên 7×7. Nếu sai thì in thêm vài đường mẫu.
@@ -539,8 +580,8 @@ TestPaths0To48(Algo algo, long expect)
     const bool ok = error.empty() && count == expect;
     Check("paths_0_48",
           ok,
-          AlgoTag(algo) + ",got=" + std::to_string(count) + ",expect=" + std::to_string(expect) +
-              (ok ? "" : ",samples=" + samples + error));
+          AlgoTag(algo) + "," + MeshTag(m) + ",got=" + std::to_string(count) +
+              ",expect=" + std::to_string(expect) + (ok ? "" : ",samples=" + samples + error));
 }
 
 } // namespace
@@ -556,13 +597,19 @@ RunSelfTest(bool forceFail)
 
     TestBitOrder();
     TestAlgoNames();
-    for (Algo a : kAllAlgos)
+    for (const Mesh& m : TestMeshes())
     {
-        TestReachableStates(a);
+        for (Algo a : kAllAlgos)
+        {
+            TestReachableStates(a, m);
+        }
     }
-    for (Algo a : kAllAlgos)
+    for (const Mesh& m : TestMeshes())
     {
-        TestPaths(a);
+        for (Algo a : kAllAlgos)
+        {
+            TestPaths(a, m);
+        }
     }
     for (Algo a : kAllAlgos)
     {
@@ -570,6 +617,10 @@ RunSelfTest(bool forceFail)
         {
             TestTurnRulesNegative(a);
         }
+    }
+    for (const Mesh& m : TestMeshes())
+    {
+        TestMirrorPathCounts(m);
     }
     TestPaths0To48(Algo::FULL, 924);
     TestPaths0To48(Algo::OE, 84);
