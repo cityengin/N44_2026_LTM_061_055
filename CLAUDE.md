@@ -65,6 +65,30 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
   - Phương pháp path cho OE = 4.36 và NF_WS t2 = 2.60, đúng bằng số trong hai báo cáo cũ.
     Vậy hai báo cáo cũ đã dùng path (k/p) chứ không dùng hop.
   - NF theo quy ước chính cho t1/t2 đảo so với bài báo, đúng như dự đoán từ đối xứng.
+- Khi so với bài báo (bảng, đồ thị, báo cáo), NF_WS được ghi nhãn **"NF (bài báo)"**. Dòng RESULT vẫn
+  giữ `routing=NF_WS,variant=diagnostic`; script Python đổi nhãn khi vẽ.
+- ρ_hop là giá trị dự đoán chuẩn cho mô phỏng: PIR_max, pir_ratio và U_hop đều tính từ ρ_hop.
+  ρ_path chỉ để tham khảo.
+
+## Mô phỏng (--mode=sim, --mode=simcheck)
+- Mô hình store-and-forward ở mức gói, queue DropTail 100000p, khác Noxim (wormhole, buffer 4 flit).
+  Vì vậy latency tuyệt đối khác bài báo; cái cần so là ngưỡng nghẽn với PIR_max = 0.0625/φ_hop.
+- Link PPP: DataRate 16 Gbps, Delay 0, InterframeGap 0. NoCHeader 10 B (src u16, dst u16, seq u32,
+  hops u16), payload = 32 − 2 − 10 = 20 B. Mọi frame được assert bằng 32 B ở trace PhyTxBegin.
+- Nhận gói bằng SetReceiveCallback, gọi SAU PointToPointHelper::Install (Node::AddDevice ghi đè callback).
+- Drop = trace "Drop" của Queue + "PhyRxDrop". Không nối "MacTxDrop" vì nó trùng với Drop của Queue.
+- Selection: mỗi router một UniformRandomVariable, chọn đều trong các bit của routeSet theo thứ tự E, W, N, S.
+  Stream cố định theo id logic y·W+x (KHÔNG dùng Node::GetId()): 3·id chọn hướng, 3·id+1 khoảng cách
+  tạo gói, 3·id+2 đích uniform. Cùng --RngRun thì cùng kết quả.
+- Tạo gói: Bernoulli mỗi chu kỳ với xác suất PIR (khoảng cách hình học, thời điểm tạo là số nguyên ns).
+  Bài báo dùng phân phối mũ; CV của khoảng cách hình học là √(1−PIR) ≈ 1 nên khác biệt không đáng kể
+  với PIR ≤ 0.03.
+- Latency đo từ lúc TẠO gói (CreationTimeTag), gồm cả thời gian chờ tại nguồn. Chỉ thống kê các gói tạo
+  trong cửa sổ [warmup, warmup+measure) (mặc định 1000 và 20000). Sau đó là pha drain tối đa --drain
+  (mặc định 20000), vẫn tiếp tục tạo gói; dừng khi mọi gói của cửa sổ đã tới đích.
+- throughput = flit tới đích trong cửa sổ / (W·H·measure); offered = flit tạo trong cửa sổ / (W·H·measure).
+  saturated=1 khi còn gói của cửa sổ chưa tới đích; lat_avg_lb tính cả các gói đó với
+  latency = thời điểm dừng − thời điểm tạo (cận dưới).
 
 ## Lưu ý ns-3 đã biết
 - Không cài Internet stack. Gửi bằng NetDevice::Send với protocol 0x0800
