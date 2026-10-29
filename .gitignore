@@ -9,3 +9,4 @@ results/*.csv
 !results/mdl_predict.csv
 !results/sweep.csv
 results/*.log
+report/bao-cao.docx

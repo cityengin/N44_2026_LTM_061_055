@@ -211,6 +211,22 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
   chung nhiễu tạo gói, KHÔNG coi các kênh hay cấu hình là mẫu độc lập (vd mean z của link_validate âm
   ở RngRun 1..5 vì các run này tạo ít gói hơn kỳ vọng; ở RngRun 6..15 thì dương).
 
+## Báo cáo (bước 8: report/bao-cao.md → report/bao-cao.docx)
+- `scripts/build_report.sh [--final]`: chạy check_report.py, có lỗi thì dừng; rồi pandoc (--number-sections,
+  --reference-doc=report/template.docx nếu có) ra report/bao-cao.docx. docx KHÔNG commit (trong .gitignore).
+  Máy không có pandoc-crossref: số Hình/Bảng/Đoạn mã "c.k" gõ tay trong nguồn, script kiểm.
+- `scripts/check_report.py [--audit] [--final]`: kiểm đánh số theo chương, mọi nhãn được nhắc trong văn
+  bản, comment `<!-- nguồn: f1, f2, <commit> -->` ngay trước mỗi hình/bảng/đoạn mã (file ở commit đó phải
+  giống bản hiện tại), dòng đoạn mã có trong file nguồn, trích dẫn [n] có trong danh mục.
+  Kiểm số thập phân: trong BẢNG phải khớp RESULTS.md hoặc file trong comment nguồn của bảng; trong VĂN BẢN
+  khớp RESULTS.md, các file tổng hợp nhỏ, file trong comment nguồn ngay trước đoạn, HOẶC xuất hiện nguyên văn
+  trong `<!-- suy-ra: … -->` ngay trước đoạn. --audit in từng số và file khớp với nó.
+- `scripts/make_template.py`: tạo report/template.docx (A4, TNR 13, giãn dòng 1,5, lề 3/2/2/2 cm, số trang).
+  Mẫu tạm, sẽ thay bằng mẫu của khoa.
+- Quy ước viết: số thập phân dùng dấu phẩy; hàng nghìn tách bằng U+00A0 ("1 586"), không dùng dấu chấm;
+  heading không tự gõ số; công thức viết bằng LaTeX; toạ độ như (0,0) đặt trong công thức để không bị
+  hiểu là số thập phân. Báo cáo trước [9] chỉ gọi bằng số trích dẫn, không nêu tên người.
+
 ## Cách làm việc
 - Luôn đề xuất kế hoạch và danh sách file trước khi viết code; chờ tôi duyệt.
 - Thay đổi nhỏ, từng bước, mỗi bước có cách kiểm tra.
