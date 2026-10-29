@@ -459,7 +459,7 @@ def estimate_pages(blocks: list[Block]) -> tuple[int, float]:
     """Ước lượng thô số trang Word (TNR 13, giãn dòng 1,5, A4, lề 3/2/2/2 cm)."""
     words = sum(len(strip_nonnumeric(b.text).split()) for b in blocks if b.kind in ("text", "heading"))
     words += sum(len(MATH_SPAN.sub(" x ", b.text).split()) for b in blocks if b.kind == "math")
-    pages = words / 330
+    pages = words / 420  # TNR 13, giãn dòng 1,5, khổ chữ 16 cm: ~30 dòng × ~14 từ
     pages += 0.45 * sum(b.kind == "figure" for b in blocks)
     pages += sum(0.04 * len(b.lines) + 0.1 for b in blocks if b.kind == "table")
     pages += sum(0.025 * len(b.lines) + 0.1 for b in blocks if b.kind == "code")
