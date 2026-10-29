@@ -455,16 +455,18 @@ def check(md: Path, final: bool, audit: list | None = None) -> tuple[Report, lis
     return rep, blocks, labels
 
 
-def estimate_pages(blocks: list[Block]) -> tuple[int, float]:
-    """Ước lượng thô số trang Word (TNR 13, giãn dòng 1,5, A4, lề 3/2/2/2 cm)."""
+def estimate_pages(blocks: list[Block], n_labels: int = 0) -> tuple[int, float]:
+    """Ước lượng thô số trang Word (TNR 13, giãn dòng 1,5, A4, lề 3/2/2/2 cm). Chỉ để định hướng độ dài."""
     words = sum(len(strip_nonnumeric(b.text).split()) for b in blocks if b.kind in ("text", "heading"))
     words += sum(len(MATH_SPAN.sub(" x ", b.text).split()) for b in blocks if b.kind == "math")
-    pages = words / 420  # TNR 13, giãn dòng 1,5, khổ chữ 16 cm: ~30 dòng × ~14 từ
-    pages += 0.45 * sum(b.kind == "figure" for b in blocks)
-    pages += sum(0.04 * len(b.lines) + 0.1 for b in blocks if b.kind == "table")
-    pages += sum(0.025 * len(b.lines) + 0.1 for b in blocks if b.kind == "code")
+    pages = words / 480  # khổ chữ 16 cm: ~30 dòng × ~16 từ
+    pages += 0.5 * sum(b.kind == "figure" for b in blocks)
+    pages += sum(0.045 * len(b.lines) + 0.15 for b in blocks if b.kind == "table")
+    pages += sum(0.018 * len(b.lines) + 0.1 for b in blocks if b.kind == "code")  # cỡ 9,5, cách dòng đơn
     pages += sum(0.08 for b in blocks if b.kind == "heading")
-    pages += 4.0  # bìa, mục lục, danh mục
+    # Mỗi heading cấp 1 sang trang mới: trung bình bỏ trống nửa trang.
+    pages += 0.5 * sum(b.kind == "heading" and b.lines[0].startswith("# ") for b in blocks)
+    pages += 1.0 + 2.0 + 0.03 * n_labels  # bìa, mục lục (field), danh mục hình/bảng/đoạn mã
     return words, pages
 
 
@@ -504,7 +506,7 @@ def main() -> int:
     rep, blocks, labels = check(md, args.final, audit)
     for line, written, hit in audit or []:
         print(f"SỐ dòng {line}: {written} ← {hit}")
-    words, pages = estimate_pages(blocks)
+    words, pages = estimate_pages(blocks, len(labels))
     for w in rep.warnings:
         print(f"CẢNH BÁO {w}")
     for e in rep.errors:
