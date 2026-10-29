@@ -1234,6 +1234,45 @@ một lần hiệu chỉnh và khóa phần mô hình sau đó.
 - Mỗi điểm chỉ chạy 5 RngRun. Khoảng tin cậy của các hiệu theo cặp đủ hẹp nhờ CRN, nhưng các thống kê gộp qua kênh hay
   qua cấu hình phải tính tới việc các cấu hình cùng RngRun dùng chung nhiễu sinh lưu lượng.
 
+# Kết luận và hướng phát triển
+
+## Kết luận
+
+Đề tài đã tái hiện thước đo routing pressure của [1] trên lưới 7×7 và kiểm chứng nó bằng một mô hình mô phỏng NoC xây
+dựng trên ns-3. Các kết quả chính gồm:
+
+- Cụm từ "chia đều lưu lượng" trong [1] có hai cách hiểu. Cách chia theo nhánh, kết hợp với quy ước NF coi Tây và Nam là
+  hướng âm, tái hiện mọi mốc của bài báo (OE 4,8125 so với 4,81; NF với transpose2 2,40625 so với 2,41). Cách chia theo
+  đường cho các giá trị khác (OE 4,361905), và chính là cách mà báo cáo trước [9] đã dùng.
+- Với NF theo hướng âm suy ra từ hệ tọa độ của [1], mốc 2,41 không thể đạt được; hai quy ước NF là ảnh gương của nhau và
+  cho kết quả đổi chỗ giữa transpose1 và transpose2.
+- Với router chọn cổng ngẫu nhiên, độ sử dụng đo được trên từng kênh khớp dự đoán theo nhánh với R² = 0,9998, còn dự
+  đoán theo đường chỉ đạt R² = 0,9642. Kênh bận nhất trong mô phỏng luôn thuộc tập kênh đạt routing pressure.
+- Cả 15 cấu hình bão hòa tại PIR~max~ = 0,0625/φ~hop~; theo định nghĩa dựa trên u_max, điểm bão hòa nằm trong khoảng
+  pir_ratio 0,9554 tới 0,9975. Trong mô hình store-and-forward với hàng đợi không giới hạn, kết quả này gần như là hệ quả
+  của bảo toàn lưu lượng, nên chưa phải bằng chứng độc lập về chất lượng của thước đo.
+- Vị trí điểm gãy của độ trễ trước ngưỡng được giải thích một phần bằng hai mô hình hàng đợi; mô hình bỏ self-contention
+  (heuristic) giữ đúng thứ tự điểm gãy của mọi cấu hình.
+- Sai khác của báo cáo trước [9] đến từ việc dùng hai định nghĩa NF khác nhau cho routing pressure và cho mô phỏng.
+
+Về mặt lập trình mạng, đề tài xây dựng mô hình NoC trực tiếp trên tầng NetDevice của ns-3, không qua Internet stack:
+header được tuần tự hóa theo thứ tự byte mạng, thời điểm tạo gói được gắn bằng Tag, router nhận gói qua callback và gửi
+qua `NetDevice::Send`. Toàn bộ kết quả được sinh lại bằng một script và trùng khớp từng byte với dữ liệu đã lưu.
+
+## Hướng phát triển
+
+- **Router wormhole trên ns-3.** Mô hình hóa router ở mức flit với buffer hữu hạn và điều khiển luồng dựa trên credit, để
+  có backpressure như Noxim [8]. Đây là bước cần thiết để kiểm chứng routing pressure một cách độc lập với lập luận bảo
+  toàn lưu lượng (mục 5.1), và để xem ngưỡng nghẽn thực tế thấp hơn PIR~max~ bao nhiêu.
+- **Emulation bằng UDP socket.** Viết một chương trình độc lập dùng lại đúng hàm `routeSet`, trong đó mỗi router là một
+  tiến trình hoặc luồng với các socket UDP đóng vai các kênh, và `NoCHeader` được gửi trong payload UDP. Chạy trên
+  loopback hoặc trên nhiều máy, chương trình cho phép kiểm tra cùng cài đặt định tuyến trên mạng thật và so sánh với kết
+  quả mô phỏng.
+- **Duyệt mọi cách cấm rẽ trên lưới 3×3.** Liệt kê các tổ hợp hướng rẽ bị cấm tại từng nút, giữ lại những thuật toán có
+  CDG không chu trình (dùng lại `CheckCdg`), rồi tính routing pressure của từng thuật toán với từng mẫu lưu lượng. Tập
+  thuật toán lớn này cho phép tìm thuật toán tối ưu theo φ cho mỗi mẫu lưu lượng, và kiểm tra tương quan giữa φ, số kênh
+  gần mức tối đa và ngưỡng nghẽn mô phỏng trên nhiều thuật toán hơn, qua đó tách được các yếu tố đang bị lẫn ở mục 4.4.1.
+
 # Tài liệu tham khảo {-}
 
 ::: {custom-style="Bibliography"}
