@@ -824,6 +824,359 @@ tiên khác nếu có.
 Phiên bản kết quả dùng trong báo cáo được đánh dấu bằng tag `v1.0-results` trong kho mã. Các phần bổ sung sau đó (ví dụ
 3×3 và các hình minh họa) cũng được đưa vào `reproduce.sh` và được so sánh theo cùng cách.
 
+# Kết quả
+
+Mọi kết quả trong chương này dùng lưới 7×7, năm thuật toán (XY, YX, NF theo quy ước chính, NF (bài báo), OE) và ba mẫu
+lưu lượng, tổng cộng 15 cấu hình. Theo mục 2.4.4, routing pressure theo cách chia theo nhánh, ký hiệu φ~hop~, là giá trị
+dự đoán chuẩn cho mô phỏng; PIR~max~ và pir_ratio đều tính từ φ~hop~.
+
+## Routing pressure tĩnh và so sánh với bài báo
+
+### So sánh với các mốc của bài báo
+
+Bảng 4.1 so routing pressure tính theo hai cách với các mốc của [1]; sai số chấp nhận là ±0,005, tức sai số làm tròn
+tới hai chữ số thập phân của bài báo.
+
+<!-- nguồn: results/selftest.txt, results/phi_all.txt, c7f4ea5 -->
+
+Table: Bảng 4.1: Routing pressure theo hai cách chia so với các mốc của [1] (lưới 7×7, riêng XY uniform trên lưới 3×3, chưa chuẩn hóa)
+
+| Thuật toán | Traffic | φ path | φ hop | [1] | Khớp (path / hop) |
+|---|---|---|---|---|---|
+| XY | transpose1 | 6 | 6 | 6 | có / có |
+| OE | transpose1 | 4,361905 | 4,8125 | 4,81 | không / có |
+| NF (quy ước chính) | transpose1 | 2,59899 | 2,40625 | 6 | không / không |
+| NF (bài báo) | transpose1 | 6 | 6 | 6 | có / có |
+| XY | transpose2 | 6 | 6 | 6 | có / có |
+| OE | transpose2 | 4,361905 | 4,8125 | 4,81 | không / có |
+| NF (quy ước chính) | transpose2 | 6 | 6 | 2,41 | không / không |
+| NF (bài báo) | transpose2 | 2,59899 | 2,40625 | 2,41 | không / có |
+| XY | uniform (3×3) | 6 | 6 | 6 | có / có |
+
+Kết quả cho thấy ba điều:
+
+- Cách chia theo nhánh kết hợp với NF (bài báo) khớp mọi mốc của [1]: OE cho 4,8125 so với 4,81, NF với transpose2 cho
+  2,40625 so với 2,41. Như vậy nhiều khả năng [1] tính channel pressure theo nhánh trên cây tìm kiếm, như ví dụ trong
+  bài báo, chứ không theo công thức $k/p$ ở phần định nghĩa.
+- Cách chia theo đường cho OE = 4,361905 với cả hai mẫu transpose, lệch rõ khỏi 4,81.
+- NF theo quy ước chính cho kết quả đổi chỗ so với [1]: 2,40625 với transpose1 và 6 với transpose2.
+
+Với thuật toán tất định, hai cách chia luôn cho cùng kết quả. Với mẫu uniform, chúng khác nhau ở các thuật toán thích
+ứng: routing pressure chưa chuẩn hóa của NF là 111,064646 theo đường và 111,75 theo nhánh, của OE là 111,371429 và
+118,6875. Sau khi chuẩn hóa, PIR~max~ của uniform là 0,035714 với XY và YX, 0,026846 với cả hai quy ước NF, và 0,025276
+với OE.
+
+### Đối xứng gương và hai quy ước NF
+
+Mẫu transpose2 ánh xạ $(x, y)$ thành $(y, x)$, nên $\Delta x = y - x$ và $\Delta y = x - y$ luôn trái dấu: mọi cặp
+đều có đích nằm về phía Tây-Nam hoặc Đông-Bắc của nguồn. Với NF theo quy ước chính (hướng âm là Tây và Bắc), các cặp
+này đều chỉ có một đường (Tây-Nam: đi Tây rồi Nam; Đông-Bắc: đi Bắc rồi Đông). Khi đó mọi channel pressure là số
+nguyên, nên routing pressure không thể bằng 2,41. Mốc này không đạt được dưới quy ước chính, và đây không phải lỗi cài
+đặt.
+
+Phép lật trục y ($y \mapsto N-1-y$) biến transpose1 thành transpose2 và biến NF quy ước chính thành NF (bài báo), còn XY
+và OE (chỉ phụ thuộc cột) không đổi. Vì vậy routing pressure của NF quy ước chính với transpose1 phải bằng của NF (bài
+báo) với transpose2, và ngược lại. Bộ tự kiểm thử xác nhận đẳng thức này tới từng kênh, theo cả hai cách chia. Kết luận
+của đề tài là [1] nhiều khả năng đã coi Tây và Nam là hướng âm của NF, khác với hướng âm suy ra từ hệ tọa độ do chính
+[1] mô tả.
+
+## Kiểm chứng tải trên từng kênh
+
+### Phương pháp
+
+Nếu router chọn cổng đều tại mỗi hop, độ sử dụng kỳ vọng của kênh $c$ là $U_{\mathrm{hop}}(c) = 16\,\hat\rho^{\mathrm{hop}}(c)\,\mathrm{PIR}$
+(mục 2.4.4). Đề tài chạy 15 cấu hình ở pir_ratio 0,5 và 0,9, mỗi điểm với RngRun 1 tới 5 và cửa sổ đo 100 000 chu kỳ,
+rồi so độ sử dụng đo được $U_{\text{đo}}(c)$, lấy trung bình qua 5 lần chạy, với hai dự đoán $U_{\mathrm{hop}}$ và
+$U_{\mathrm{path}}$. Chỉ các kênh có lưu lượng (dự đoán khác 0) được tính, tổng cộng 3 944 điểm. Ngoài hồi quy, đề tài
+tính cho mỗi kênh $z = (\bar U_{\text{đo}} - U_{\text{dự đoán}}) / (s/\sqrt{5})$, với $s$ là độ lệch chuẩn qua 5 lần
+chạy. Nếu dự đoán đúng, $z$ có phân phối Student với 4 bậc tự do, nên độ lệch chuẩn của $z$ xấp xỉ 1,414 và khoảng
+0,0399 số kênh có $|z| > 3$.
+
+### Kết quả hồi quy
+
+<!-- nguồn: results/link_validate_summary.csv, results/link_validate_z.csv, aede5ad -->
+
+Table: Bảng 4.2: Độ sử dụng đo được so với hai dự đoán (kênh có lưu lượng, 15 cấu hình)
+
+| Dự đoán | pir_ratio | Số kênh | R² | Hệ số góc | RMSE | Sai số lớn nhất | Tại |
+|---|---|---|---|---|---|---|---|
+| hop | 0,5 | 1 972 | 0,9995 | 0,9995 | 0,0029 | 0,011077 | OE/transpose2, kênh 16-23 |
+| hop | 0,9 | 1 972 | 0,9998 | 0,9992 | 0,0037 | 0,015633 | NF (bài báo)/transpose2, kênh 22-15 |
+| hop | cả hai | 3 944 | 0,9998 | 0,9993 | 0,0033 | 0,015633 | NF (bài báo)/transpose2, kênh 22-15 |
+| path | 0,5 | 1 972 | 0,9529 | 0,9612 | 0,0288 | 0,212681 | OE/transpose2, kênh 33-26 |
+| path | 0,9 | 1 972 | 0,9533 | 0,9610 | 0,0516 | 0,383492 | OE/transpose1, kênh 19-26 |
+| path | cả hai | 3 944 | 0,9642 | 0,9698 | 0,0418 | 0,383492 | OE/transpose1, kênh 19-26 |
+
+Bảng 4.2 và Hình 4.1 cho thấy dự đoán theo nhánh khớp gần như hoàn hảo: R² = 0,9998, hệ số góc 0,9993, và RMSE 0,0033
+ở mức nhiễu thống kê của mô phỏng. Dự đoán theo đường chỉ đạt R² = 0,9642 và sai tới 0,383492 trên một kênh của OE. Thống
+kê $z$ dẫn tới cùng kết luận: với dự đoán theo nhánh, độ lệch chuẩn của $z$ là 1,39678 và tỉ lệ kênh có $|z| > 3$ là
+0,0425963, sát giá trị lý thuyết; với dự đoán theo đường, hai đại lượng này là 18,0219 và 0,44929, nên giả thiết chia
+theo đường bị bác bỏ.
+
+Trung bình của $z$ theo nhánh hơi âm (−0,262867). Nguyên nhân là CRN: mọi cấu hình cùng RngRun nhận cùng một tập gói, nên
+nếu các RngRun 1 tới 5 tình cờ tạo ít gói hơn kỳ vọng thì độ sử dụng của mọi kênh, trong mọi cấu hình, cùng lệch xuống.
+Vì vậy các kênh không phải là các mẫu độc lập, và độ lệch chung này không phải sai số của dự đoán.
+
+<!-- nguồn: report/figures/link_validate.png, aede5ad -->
+
+![Hình 4.1: Độ sử dụng kênh đo được so với dự đoán theo nhánh (trái) và theo đường (phải); đường chéo là y = x](figures/link_validate.png){width=100%}
+
+### Phân bố tải trên lưới
+
+Hình 4.2 và Hình 4.3 vẽ độ sử dụng dự đoán và đo được của từng kênh ở pir_ratio 0,9 cho XY, OE và NF (bài báo) với hai mẫu
+transpose; viền đen đánh dấu các kênh đạt φ theo dự đoán. Hai hình gần như trùng nhau. Bảng 4.3 cho thấy kênh bận nhất
+trong mô phỏng luôn thuộc tập kênh đạt φ, với độ sử dụng từ 0,897 tới 0,909 so với dự đoán 0,9.
+
+<!-- nguồn: results/link_validate_channels.csv, report/figures/heatmap_pred.png, c7f4ea5 -->
+
+Table: Bảng 4.3: Kênh bận nhất ở pir_ratio 0,9: dự đoán và mô phỏng
+
+| Thuật toán | Traffic | Số kênh đạt φ | U~hop~ lớn nhất | U~đo~ lớn nhất | Kênh | Thuộc tập kênh đạt φ |
+|---|---|---|---|---|---|---|
+| XY | transpose1 | 4 | 0,900 | 0,904 | 42-35 | có |
+| XY | transpose2 | 4 | 0,900 | 0,900 | 47-48 | có |
+| OE | transpose1 | 1 | 0,900 | 0,906 | 19-26 | có |
+| OE | transpose2 | 1 | 0,900 | 0,897 | 33-26 | có |
+| NF (bài báo) | transpose1 | 4 | 0,900 | 0,904 | 42-35 | có |
+| NF (bài báo) | transpose2 | 12 | 0,900 | 0,909 | 17-16 | có |
+
+<!-- nguồn: report/figures/heatmap_pred.png, 2a1afa5 -->
+
+![Hình 4.2: Độ sử dụng dự đoán U~hop~ của từng kênh ở pir_ratio 0,9](figures/heatmap_pred.png){width=60%}
+
+<!-- nguồn: report/figures/heatmap_meas.png, 2a1afa5 -->
+
+![Hình 4.3: Độ sử dụng đo được U~đo~ của từng kênh ở pir_ratio 0,9 (trung bình 5 RngRun)](figures/heatmap_meas.png){width=60%}
+
+## Quét tải
+
+### Thiết kế thí nghiệm
+
+Mỗi cấu hình được chạy trên hai lưới điểm. Lưới tương đối gồm pir_ratio từ 0,1 tới 1,3, bước 0,1, nên mọi cấu hình được
+đặt trên cùng một thang so với ngưỡng dự đoán của chính nó. Lưới tuyệt đối gồm PIR từ 0,009 tới 0,015, bước 0,001,
+tương ứng khoảng PIR trong các hình kết quả của [1], dùng để so trực tiếp các thuật toán. Mỗi điểm chạy với RngRun 1 tới
+5, tổng cộng 1 500 lần chạy, mỗi lần với warmup 10 000, measure 20 000 và drain 20 000 chu kỳ.
+
+### Độ sử dụng của kênh bận nhất
+
+Hình 4.4 cho thấy u_max (độ sử dụng của kênh bận nhất, trung bình 5 RngRun) bám đường $y = x$ cho tới pir_ratio = 1
+rồi đi ngang ở 1, đúng như dự đoán: kênh cổ chai bận đúng bằng pir_ratio và không thể bận quá 100% thời gian. Ở pir_ratio
+1,0, u_max của 15 cấu hình nằm trong khoảng 0,983 tới 1,000; từ pir_ratio 1,1 trở đi, mọi cấu hình đều có u_max = 1,000. Các cấu hình có
+nhiều kênh gần mức tối đa (NF thích ứng, XY và YX với uniform) nằm hơi trên đường $y = x$, vì giá trị lớn nhất của
+nhiều ước lượng có nhiễu bị đẩy lên.
+
+<!-- nguồn: report/figures/sweep_umax_rel.png, 42a2883 -->
+
+![Hình 4.4: u_max theo pir_ratio; đường đứt là y = x](figures/sweep_umax_rel.png){width=100%}
+
+### Điểm bão hòa theo ba định nghĩa
+
+Vì saturated = 0 không đủ để kết luận mạng chưa bão hòa (mục 3.3.6), đề tài xác định điểm bão hòa theo ba định nghĩa,
+nội suy tuyến tính trên lưới tương đối:
+
+- (i) throughput/offered < 0,95: mạng không còn chuyển hết lưu lượng được đưa vào (Hình 4.5);
+- (ii) lat_avg ≥ 2·16·hops_avg: độ trễ trung bình gấp đôi độ trễ khi không tải (Hình 4.6);
+- (iii) u_max ≥ 0,98: kênh bận nhất gần như bận liên tục.
+
+<!-- nguồn: results/saturation.csv, 73a6e1c -->
+
+Table: Bảng 4.4: Điểm bão hòa theo pir_ratio và điểm gãy dự đoán của hai mô hình hàng đợi (mục 4.4)
+
+| Thuật toán | Traffic | φ~hop~ | n_near_max | (i) | (ii) | (iii) | knee | knee_sc |
+|---|---|---|---|---|---|---|---|---|
+| NF (quy ước chính) | transpose1 | 2,4062 | 12 | 1,1119 | 0,9044 | 0,9563 | 0,8660 | 0,9365 |
+| NF (quy ước chính) | transpose2 | 6,0000 | 4 | 1,2019 | 0,9937 | 0,9842 | 0,8933 | 0,9902 |
+| NF (quy ước chính) | uniform | 2,3281 | 12 | 1,1476 | 0,9038 | 0,9749 | 0,8478 | 0,9375 |
+| NF (bài báo) | transpose1 | 6,0000 | 4 | 1,2095 | 0,9968 | 0,9890 | 0,8933 | 0,9902 |
+| NF (bài báo) | transpose2 | 2,4062 | 12 | 1,1177 | 0,9036 | 0,9599 | 0,8660 | 0,9365 |
+| NF (bài báo) | uniform | 2,3281 | 12 | 1,1447 | 0,9024 | 0,9712 | 0,8478 | 0,9375 |
+| OE | transpose1 | 4,8125 | 1 | 1,2931 | 1,0074 | 0,9975 | 0,9755 | 0,9932 |
+| OE | transpose2 | 4,8125 | 1 | — | 1,0089 | 0,9926 | 0,9755 | 0,9932 |
+| OE | uniform | 2,4727 | 4 | 1,2545 | 0,9503 | 0,9791 | 0,9187 | 0,9806 |
+| XY | transpose1 | 6,0000 | 4 | 1,2137 | 1,0006 | 0,9898 | 0,8933 | 0,9902 |
+| XY | transpose2 | 6,0000 | 4 | 1,2041 | 0,9954 | 0,9873 | 0,8933 | 0,9902 |
+| XY | uniform | 1,7500 | 56 | 1,0503 | 0,8220 | 0,9621 | 0,7490 | 0,8748 |
+| YX | transpose1 | 6,0000 | 4 | 1,2136 | 1,0028 | 0,9938 | 0,8933 | 0,9902 |
+| YX | transpose2 | 6,0000 | 4 | 1,2067 | 0,9985 | 0,9864 | 0,8933 | 0,9902 |
+| YX | uniform | 1,7500 | 56 | 1,0506 | 0,8224 | 0,9554 | 0,7490 | 0,8748 |
+
+Ghi chú: n_near_max là số kênh có $\hat\rho^{\mathrm{hop}} \ge 0{,}95\,\varphi_{\mathrm{hop}}$; "—" nghĩa là không vượt
+ngưỡng trong lưới 0,1 tới 1,3; knee và knee_sc là điểm gãy (ii) dự đoán bởi hai mô hình ở mục 4.4.
+
+Theo định nghĩa (iii), cả 15 cấu hình bão hòa trong khoảng pir_ratio từ 0,9554 tới 0,9975, tức ngay dưới PIR~max~. Độ
+trễ (định nghĩa (ii)) gãy trong khoảng 0,8220 tới 1,0089. Định nghĩa (i) trễ hơn hẳn (từ 1,0503 trở lên): khi kênh cổ
+chai quá tải, chỉ các luồng đi qua nó bị chặn, còn các luồng khác vẫn tới đích, nên tỉ số throughput/offered giảm chậm.
+Như vậy, trong mô hình của đề tài, PIR~max~ = 0,0625/φ~hop~ dự đoán đúng ngưỡng nghẽn của cả 15 cấu hình. Chương 5 bàn
+về mức độ độc lập của kết quả này.
+
+<!-- nguồn: report/figures/sweep_throughput_rel.png, 42a2883 -->
+
+![Hình 4.5: Tỉ số throughput/offered theo pir_ratio](figures/sweep_throughput_rel.png){width=100%}
+
+<!-- nguồn: report/figures/sweep_latency_rel.png, 42a2883 -->
+
+![Hình 4.6: Độ trễ trung bình theo pir_ratio (thang log)](figures/sweep_latency_rel.png){width=100%}
+
+### So sánh định tính với bài báo
+
+Vì mô hình router khác nhau (store-and-forward so với wormhole), độ trễ tuyệt đối của đề tài không so được với các hình
+kết quả của [1]; chỉ so được thứ tự giữa các thuật toán. Hình 4.7 vẽ độ trễ theo PIR tuyệt đối. Với transpose1, XY và
+NF (bài báo) (cùng φ~hop~ = 6) gãy ngay sau PIR~max~ = 0,010417, OE (φ~hop~ = 4,8125) chịu được tới khoảng PIR~max~ =
+0,012987, còn NF theo quy ước chính gần như không đổi trong cả khoảng quét vì PIR~max~ của nó là 0,025974. Với
+transpose2, vai trò của hai quy ước NF đổi chỗ. Thứ tự này trùng với thứ tự mà [1] suy ra từ routing pressure.
+
+<!-- nguồn: report/figures/sweep_latency_abs.png, 42a2883 -->
+
+![Hình 4.7: Độ trễ trung bình theo PIR tuyệt đối; đường chấm là PIR~max~ của từng thuật toán](figures/sweep_latency_abs.png){width=100%}
+
+### Hiệu theo cặp nhờ CRN
+
+Nhờ CRN, có thể so hai thuật toán bằng hiệu độ trễ trên cùng RngRun. Bảng 4.5 trích hiệu độ trễ kèm khoảng tin cậy 95%
+(phân phối Student, 4 bậc tự do); dấu * đánh dấu hiệu có ý nghĩa thống kê.
+
+<!-- nguồn: results/paired_diffs.csv, 42a2883 -->
+
+Table: Bảng 4.5: Hiệu độ trễ trung bình theo cặp (chu kỳ, A − B ± khoảng tin cậy 95%)
+
+| Traffic | PIR | OE − XY | NF (bài báo) − XY | OE − NF (bài báo) | NF (quy ước chính) − XY |
+|---|---|---|---|---|---|
+| transpose1 | 0,009 | −7,5 ± 2,7\* | 0,7 ± 1,5 | −8,2 ± 2,7\* | −12,1 ± 2,2\* |
+| transpose1 | 0,010 | −25,2 ± 8,9\* | 1,6 ± 6,3 | −26,8 ± 10,9\* | −32,3 ± 8,6\* |
+| transpose1 | 0,012 | −816,6 ± 105,2\* | 0,8 ± 37,9 | −817,4 ± 122,8\* | −834,0 ± 108,5\* |
+| transpose1 | 0,015 | −2 957,6 ± 112,2\* | 22,1 ± 59,0 | −2 979,7 ± 127,2\* | −3 413,1 ± 127,3\* |
+| transpose2 | 0,009 | −7,2 ± 1,6\* | −12,1 ± 1,9\* | 4,9 ± 0,4\* | 0,0 ± 1,5 |
+| transpose2 | 0,010 | −28,2 ± 3,8\* | −36,1 ± 3,9\* | 7,9 ± 0,9\* | −3,4 ± 2,2\* |
+| transpose2 | 0,012 | −860,2 ± 61,3\* | −880,5 ± 60,0\* | 20,2 ± 7,2\* | 3,7 ± 44,9 |
+| transpose2 | 0,015 | −3 034,1 ± 130,3\* | −3 464,8 ± 126,4\* | 430,6 ± 54,0\* | −29,3 ± 97,4 |
+
+Với transpose1, OE tốt hơn XY ở mọi PIR, kể cả ở PIR = 0,009 khi cả hai còn xa ngưỡng (hiệu −7,5 ± 2,7 chu kỳ). NF (bài
+báo) và XY không khác nhau có ý nghĩa ở bất kỳ PIR nào, phù hợp với việc hai thuật toán có cùng φ~hop~ = 6. Với
+transpose2, NF (bài báo) tốt nhất, OE đứng thứ hai, XY kém nhất, đúng thứ tự φ~hop~ (2,40625 < 4,8125 < 6). Nhờ ghép cặp,
+khoảng tin cậy rất hẹp ở tải thấp, ví dụ ±0,4 chu kỳ cho hiệu OE − NF (bài báo) ở PIR = 0,009, nên phát hiện được cả
+những khác biệt vài chu kỳ.
+
+## Điểm gãy của độ trễ và mô hình hàng đợi
+
+### Điểm gãy và số kênh gần mức tối đa
+
+Dù u_max chạm 1 tại gần cùng một pir_ratio ở mọi cấu hình, độ trễ gãy sớm muộn khác nhau (cột (ii) của Bảng 4.4). Hình 4.8
+vẽ điểm gãy (ii) theo n_near_max, số kênh có channel pressure ít nhất bằng 0,95·φ~hop~. Đề tài ghi nhận một quan sát,
+chưa phải quy luật đã kiểm chứng: điểm gãy sớm hơn khi có nhiều kênh gần mức tối đa. Cấu hình có 1 kênh (OE với hai mẫu
+transpose) gãy ở 1,007 tới 1,009; nhóm 4 kênh (các thuật toán tất định với transpose) ở 0,994 tới 1,003; nhóm 12 kênh
+(NF thích ứng) ở 0,902 tới 0,904; nhóm 56 kênh (XY và YX với uniform) ở 0,822.
+
+Tuy nhiên n_near_max bị lẫn với loại mẫu lưu lượng và loại thuật toán: nhóm 4 kênh toàn là thuật toán tất định với
+transpose, nhóm 12 kênh toàn là NF thích ứng, nhóm 56 kênh là uniform. Vì vậy chưa tách được tác động của số kênh khỏi
+tác động của loại lưu lượng. OE với uniform là một điểm lệch: chỉ có 4 kênh gần mức tối đa nhưng gãy ở 0,950.
+
+<!-- nguồn: report/figures/saturation_vs_nearmax.png, 2a1afa5 -->
+
+![Hình 4.8: Điểm gãy (ii) của độ trễ theo số kênh gần mức tối đa n_near_max (thang log)](figures/saturation_vs_nearmax.png){width=80%}
+
+### Mô hình Kleinrock và M/D/1
+
+Để giải thích vị trí điểm gãy, đề tài xây một mô hình giải tích theo xấp xỉ độc lập của Kleinrock [5]: mỗi kênh được coi
+là một hàng đợi độc lập, có luồng đến Poisson với tốc độ $\lambda_c = \hat\rho^{\mathrm{hop}}(c)\,\mathrm{PIR}$ và thời
+gian phục vụ cố định 16 chu kỳ, tức hàng đợi M/D/1. Theo công thức Pollaczek–Khinchine [10], thời gian chờ trung bình
+tại kênh có độ sử dụng $U_c$ là
+
+$$W_c = \frac{16\,U_c}{2\,(1 - U_c)}, \qquad
+\text{lat}_{\text{pred}} = 16\,\overline{\text{hops}} + \frac{1}{\Lambda}\sum_{c} \lambda_c W_c ,$$
+
+trong đó $\Lambda$ là tổng tốc độ phát của mạng. Điểm gãy dự đoán (knee) là pir_ratio tại đó $\text{lat}_{\text{pred}}$
+đạt hai lần độ trễ khi không tải.
+
+Trước khi chạy, đề tài dự đoán mô hình sẽ ước lượng cao: trong chuỗi hàng đợi nối tiếp có thời gian phục vụ cố định, các
+gói ra khỏi một kênh đã cách nhau ít nhất 16 chu kỳ, nên ít va nhau ở kênh sau hơn so với giả thiết Poisson. Kết quả
+đúng dấu: mô hình cao hơn mô phỏng ở mọi cấu hình và mọi pir_ratio. Phần thời gian chờ bị ước lượng cao 1,4 tới 2,1 lần
+với uniform, các thuật toán thích ứng và OE, và 3,5 tới 4,7 lần với các thuật toán tất định trên transpose, nơi luồng
+đi theo đường cố định nên hiệu ứng giãn gói mạnh nhất. Ở PIR = 0,001, mô hình dự đoán 2,56 chu kỳ chờ trong khi
+simcheck đo được 0,48 tới 0,68. Điểm gãy dự đoán luôn sớm hơn điểm gãy mô phỏng từ 0,03 tới 0,11. Mô hình giữ đúng thứ
+tự giữa các nhóm 56 kênh (0,749 so với 0,822 của mô phỏng), 12 kênh (0,848 tới 0,866 so với 0,902 tới 0,904) và 1 kênh
+(0,976 so với 1,007 tới 1,009), nhưng không tái hiện điểm lệch OE với uniform: mô hình xếp OE với uniform (0,919) sau
+nhóm tất định trên transpose (0,893), trong khi mô phỏng thì ngược lại.
+
+### Mô hình bỏ self-contention
+
+Từ quan sát trên, đề tài thực hiện đúng một lần hiệu chỉnh mô hình. Các gói tới một kênh từ cùng một cổng vào (cùng một
+kênh láng giềng) đã cách nhau ít nhất 16 chu kỳ, vì kênh láng giềng chỉ truyền một gói mỗi 16 chu kỳ, nên chúng không
+xung đột với nhau. Ví dụ với XY và transpose1, kênh cổ chai 6-13 nhận toàn bộ lưu lượng từ kênh 5-6 (nút 6 tự ánh xạ
+vào chính nó nên không phát), nên gói không phải chờ dù $U = 0{,}9$. Mô hình hiệu chỉnh, gọi là kleinrock_sc, nhân thời
+gian chờ M/D/1 với xác suất hai gói liên tiếp đến từ hai cổng vào khác nhau:
+
+$$W_c^{\mathrm{sc}} = W_c \left(1 - \sum_i p_{i,c}^2\right), \qquad p_{i,c} = \frac{\text{rate}(i \to c)}{\hat\rho(c)},$$
+
+trong đó $i$ chạy trên các kênh vào từ nút láng giềng; luồng phát tại chỗ không nằm trong tổng. Lưu lượng
+$\text{rate}(i \to c)$ lấy từ dòng `PHITURN` của bộ tính routing pressure, tức cùng cây tìm kiếm với $\hat\rho$. Công thức
+này là một heuristic, không được suy ra chặt chẽ. Bảng 4.6 so sánh hai mô hình, và Hình 4.9 vẽ độ trễ của mô phỏng cùng hai
+mô hình.
+
+<!-- nguồn: results/mdl_predict.csv, results/saturation.csv, report/RESULTS.md, 0c1b3ae -->
+
+Table: Bảng 4.6: So sánh hai mô hình hàng đợi với mô phỏng (pred/sim là tỉ số thời gian chờ dự đoán trên đo được)
+
+| Chỉ số | kleinrock | kleinrock_sc |
+|---|---|---|
+| thời gian chờ pred/sim, pir_ratio 0,1 | 1,64 … 4,74 | 0,89 … 1,09 |
+| thời gian chờ pred/sim, pir_ratio 0,5 | 1,56 … 4,29 | 0,86 … 0,96 |
+| thời gian chờ pred/sim, pir_ratio 0,9 | 1,36 … 3,72 | 0,67 … 0,83 |
+| sai số độ trễ tổng, pir_ratio 0,9 (%) | +14,5 … +60,2 | −17,3 … −3,8 |
+| thời gian chờ ở PIR 0,001, XY/transpose1 và transpose2 (chu kỳ) | 2,560 | 0,590 |
+| điểm gãy dự đoán − điểm gãy (ii) | −0,109 … −0,032 | −0,016 … +0,053 |
+| xếp OE/uniform gãy sớm hơn nhóm tất định trên transpose | không | có |
+
+Mô hình kleinrock_sc khớp thời gian chờ ở tải thấp (tỉ số 0,89 tới 1,09; ở PIR = 0,001 dự đoán 0,59 chu kỳ so với 0,48 tới
+0,68 đo được) và giữ đúng toàn bộ thứ tự điểm gãy của mô phỏng, kể cả việc OE với uniform (0,981) gãy sớm hơn nhóm tất
+định trên transpose (0,990). Tuy nhiên khoảng cách giữa hai giá trị này chỉ là 0,009, so với 0,044 tới 0,053 trong mô
+phỏng. Sai số còn lại có dấu ngược với mô hình cũ: ở tải cao, kleinrock_sc ước lượng thấp thời gian chờ (tỉ số 0,67 tới
+0,83), nên điểm gãy của các cấu hình có nhiều kênh gần mức tối đa bị dự đoán muộn hơn. Theo nguyên tắc đặt ra từ trước,
+phần mô hình được khóa sau lần hiệu chỉnh này: không hiệu chỉnh thêm công thức hay tham số.
+
+<!-- nguồn: report/figures/mdl_predict.png, 73a6e1c -->
+
+![Hình 4.9: Độ trễ của mô phỏng (nét liền) và mô hình (nét đứt): hàng trên kleinrock, hàng dưới kleinrock_sc](figures/mdl_predict.png){width=100%}
+
+## Sai khác của báo cáo trước
+
+Báo cáo trước về cùng đề tài [9] công bố routing pressure và độ trễ mô phỏng của XY, NF và OE với hai mẫu transpose ở
+PIR 0,010 và 0,014. Bảng 4.7 đặt các số này cạnh kết quả của đề tài.
+
+<!-- nguồn: results/sweep.csv, results/phi_all.txt, report/RESULTS.md, 0c1b3ae -->
+
+Table: Bảng 4.7: Routing pressure và độ trễ trung bình (chu kỳ) của đề tài so với báo cáo trước [9]
+
+| Traffic | Thuật toán | φ path | φ hop | Độ trễ @0,010 | Độ trễ @0,014 | [9] @0,010 | [9] @0,014 |
+|---|---|---|---|---|---|---|---|
+| transpose1 | XY | 6 | 6 | 126,1 | 2 549,7 | 1 586 | 2 857 |
+| transpose1 | NF (quy ước chính) | 2,59899 | 2,40625 | 93,7 | 101,0 | 162 | 797 |
+| transpose1 | NF (bài báo) | 6 | 6 | 127,7 | 2 576,5 | — | — |
+| transpose1 | OE | 4,361905 | 4,8125 | 100,8 | 288,4 | 183 | 695 |
+| transpose2 | XY | 6 | 6 | 130,3 | 2 614,0 | 1 089 | 2 026 |
+| transpose2 | NF (quy ước chính) | 6 | 6 | 126,9 | 2 593,3 | 1 642 | 2 927 |
+| transpose2 | NF (bài báo) | 2,59899 | 2,40625 | 94,2 | 100,8 | — | — |
+| transpose2 | OE | 4,361905 | 4,8125 | 102,1 | 297,6 | 185 | 666 |
+
+Phân tích cho thấy hai điểm:
+
+- **Routing pressure của [9] khớp cách chia theo đường.** [9] báo cáo routing pressure của NF là 6 với transpose1 và
+  2,60 với transpose2, và của OE là 4,36. Các số này trùng với cách chia theo đường kết hợp NF (bài báo) (2,59899 và
+  4,361905), không trùng với cách chia theo nhánh.
+- **Mô phỏng của [9] dùng NF với quy ước khác.** Trong [9], NF tốt với transpose1 (162 chu kỳ ở PIR 0,010) và kém với
+  transpose2 (1 642 chu kỳ). Xu hướng này khớp với NF theo quy ước chính trong mô phỏng của đề tài (93,7 so với 126,9),
+  ngược với NF (bài báo) (127,7 so với 94,2). Như vậy routing pressure và mô phỏng trong [9] đã dùng hai định nghĩa NF
+  khác nhau, chính là loại lỗi mà nguyên tắc "một hàm định tuyến" ở mục 3.1.1 loại bỏ.
+
+Ngoài ra, ở PIR = 0,010, nhỏ hơn PIR~max~ = 0,010417 của XY, độ trễ của XY trong [9] là 1 586 chu kỳ với transpose1 và
+1 089 chu kỳ với transpose2, trong khi mô phỏng của đề tài cho 126,1 và 130,3 chu kỳ. Độ trễ cỡ hàng nghìn chu kỳ ở dưới
+ngưỡng dự đoán cho thấy mô phỏng của [9] đã ở trạng thái bão hòa. Từ tài liệu của [9], đề tài không xác định được nguyên
+nhân cụ thể. Loại sai lệch này, chẳng hạn khung thừa byte làm thời gian truyền mỗi hop lớn hơn 16 chu kỳ, sẽ bị phát hiện
+ngay bằng kiểm tra một gói đi 12 hop phải mất đúng 192 chu kỳ (mục 3.4.1). Hình 4.10 so độ trễ của hai quy ước NF và XY
+với các điểm của [9].
+
+<!-- nguồn: report/figures/old_reports_nf.png, 42a2883 -->
+
+![Hình 4.10: Độ trễ của XY và hai quy ước NF theo PIR tuyệt đối; dấu × là số liệu của báo cáo trước [9]](figures/old_reports_nf.png){width=100%}
+
 # Tài liệu tham khảo {-}
 
 ::: {custom-style="Bibliography"}
