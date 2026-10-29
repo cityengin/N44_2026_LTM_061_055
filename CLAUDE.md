@@ -213,7 +213,7 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
 
 ## Báo cáo (bước 8: report/bao-cao.md → report/bao-cao.docx)
 - `scripts/build_report.sh [--final]`: chạy check_report.py, có lỗi thì dừng; rồi pandoc (--number-sections,
-  --reference-doc=report/template.docx nếu có) ra report/bao-cao.docx. docx KHÔNG commit (trong .gitignore).
+  --reference-doc=report/template.docx nếu có) ra report/bao-cao.docx (được theo dõi trong git).
   Máy không có pandoc-crossref: số Hình/Bảng/Đoạn mã "c.k" gõ tay trong nguồn, script kiểm.
 - `scripts/check_report.py [--audit] [--final]`: kiểm đánh số theo chương, mọi nhãn được nhắc trong văn
   bản, comment `<!-- nguồn: f1, f2, <commit> -->` ngay trước mỗi hình/bảng/đoạn mã (file ở commit đó phải
