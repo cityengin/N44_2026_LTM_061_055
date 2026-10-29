@@ -1177,6 +1177,63 @@ với các điểm của [9].
 
 ![Hình 4.10: Độ trễ của XY và hai quy ước NF theo PIR tuyệt đối; dấu × là số liệu của báo cáo trước [9]](figures/old_reports_nf.png){width=100%}
 
+# Thảo luận và hạn chế
+
+## Ý nghĩa của việc bão hòa tại PIR~max~
+
+Kết quả nổi bật nhất của chương 4 là cả 15 cấu hình đều bão hòa tại pir_ratio xấp xỉ 1, tức đúng tại PIR~max~ =
+0,0625/φ~hop~. Tuy nhiên, kết quả này cần được hiểu đúng phạm vi. Trong mô hình store-and-forward với hàng đợi không giới
+hạn, router chọn cổng đều tại mỗi hop, nên theo bảo toàn lưu lượng, tải trung bình của mỗi kênh đúng bằng
+$16\,\hat\rho^{\mathrm{hop}}(c)\,\mathrm{PIR}$ (mục 2.4.4). Mạng chỉ ổn định khi mọi kênh có tải nhỏ hơn 1. Hai điều này
+kết hợp lại cho thấy việc ngưỡng bão hòa trùng với PIR~max~ gần như là hệ quả trực tiếp của định nghĩa, chứ không phải
+một bằng chứng độc lập rằng routing pressure là thước đo tốt của hiệu năng.
+
+Tương tự, phần kiểm chứng tải trên từng kênh (mục 4.2) có hai giá trị rõ ràng: nó xác nhận bộ tính routing pressure và
+bộ mô phỏng nhất quán với nhau, và nó bác bỏ cách hiểu "chia theo đường" đối với router chọn cổng ngẫu nhiên. Nhưng nó
+không chứng minh rằng routing pressure dự đoán đúng hiệu năng trong mọi mô hình router.
+
+## Hành vi trước ngưỡng không chỉ phụ thuộc φ
+
+Routing pressure chỉ là một con số: tải của kênh nặng nhất. Hai cấu hình có cùng pir_ratio có thể có độ trễ rất khác
+nhau trước khi tới ngưỡng. Quan sát ở mục 4.4.1 gợi ý rằng điểm gãy của độ trễ phụ thuộc số kênh gần mức tối đa: càng
+nhiều kênh gần bão hòa, gói càng có nhiều khả năng phải chờ ở nhiều hop, và độ trễ tăng sớm hơn. Tuy nhiên đây mới là
+quan sát, chưa phải quy luật đã kiểm chứng, vì số kênh gần mức tối đa bị lẫn với loại mẫu lưu lượng và loại thuật toán
+trong 15 cấu hình, và OE với uniform là một điểm lệch rõ (4 kênh nhưng gãy ở 0,950). Muốn tách được hai yếu tố này cần
+nhiều thuật toán hơn trên cùng một mẫu lưu lượng (mục 6.2).
+
+## Giới hạn của hai mô hình hàng đợi
+
+Mô hình đầu tiên dựa trên xấp xỉ độc lập của Kleinrock [5], vốn bỏ qua tương quan giữa các hàng đợi nối tiếp. Sai số của
+nó có dấu đúng như dự đoán trước khi chạy, nhưng lớn nhất ở các thuật toán tất định trên transpose. Mô hình hiệu chỉnh
+kleinrock_sc dùng công thức $1 - \sum_i p_{i,c}^2$ để bỏ phần tự xung đột giữa các gói đến từ cùng một cổng vào. Công thức
+này là một heuristic: nó đúng ở hai trường hợp biên (một cổng vào duy nhất thì không phải chờ; nhiều cổng vào cân bằng
+thì gần với M/D/1), nhưng không được suy ra chặt chẽ cho trường hợp tổng quát. Sai số còn lại đổi dấu so với mô hình cũ
+(ước lượng thấp thời gian chờ ở tải cao). Để tránh việc chỉnh mô hình cho tới khi khớp số liệu, đề tài chỉ cho phép đúng
+một lần hiệu chỉnh và khóa phần mô hình sau đó.
+
+## Những điều chưa kiểm chứng
+
+- **Backpressure.** Đề tài chưa kiểm routing pressure khi router có buffer hữu hạn, như router wormhole với buffer bốn
+  flit của [1]. Khi đó nghẽn ở một kênh lan ngược về các kênh phía trước và về nguồn, nên ngưỡng nghẽn thực tế có thể thấp
+  hơn PIR~max~, và mức thấp hơn bao nhiêu có thể phụ thuộc vào cấu trúc luồng chứ không chỉ vào φ. Đây là điều kiện để
+  kiểm tra routing pressure một cách độc lập với lập luận bảo toàn lưu lượng ở trên.
+- **Hàm lựa chọn thích ứng theo tải.** Cách chia theo nhánh chỉ đúng khi router chọn cổng đều và độc lập với trạng thái
+  mạng. Với selection dựa trên mức nghẽn của cổng ra, phân bố tải sẽ khác $\hat\rho^{\mathrm{hop}}$, và PIR~max~ tính
+  từ φ~hop~ có thể quá bi quan.
+- **Quy ước NF của [1].** Kết luận rằng [1] coi Tây và Nam là hướng âm được suy ra từ việc các con số khớp nhau, không
+  từ mã nguồn của [1].
+- **Nguyên nhân sai khác về độ trễ của [9].** Đề tài chỉ ra được sự không nhất quán về định nghĩa NF, nhưng không xác
+  định được vì sao độ trễ trong [9] đã cỡ hàng nghìn chu kỳ ở dưới ngưỡng dự đoán.
+
+## Các hạn chế khác
+
+- Mô hình store-and-forward ở mức gói khác Noxim (wormhole, mức flit), nên độ trễ tuyệt đối không so được với [1].
+- Gói được tạo theo quá trình Bernoulli thay vì khoảng cách mũ như [1]; như đã phân tích ở mục 3.3.5, khác biệt này
+  không đáng kể ở các mức PIR được dùng.
+- Mọi thí nghiệm dùng một kích thước lưới (7×7) và ba mẫu lưu lượng tổng hợp; chưa có lưu lượng của ứng dụng thực.
+- Mỗi điểm chỉ chạy 5 RngRun. Khoảng tin cậy của các hiệu theo cặp đủ hẹp nhờ CRN, nhưng các thống kê gộp qua kênh hay
+  qua cấu hình phải tính tới việc các cấu hình cùng RngRun dùng chung nhiễu sinh lưu lượng.
+
 # Tài liệu tham khảo {-}
 
 ::: {custom-style="Bibliography"}
