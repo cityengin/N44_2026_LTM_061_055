@@ -2,8 +2,8 @@
 # Tái lập toàn bộ kết quả từ đầu vào một thư mục tạm, rồi so từng byte với các file đã commit.
 # KHÔNG BAO GIỜ ghi vào results/ hay report/ của repo.
 #
-# Thứ tự: build → selftest → simcheck → phi (--channels, --turns) → link_validate → sweep
-#         → analyze_sweep → mdl_predict → heatmap → RESULTS.md → so sánh.
+# Thứ tự: build → selftest → simcheck → phi (--channels, --turns) → example_3x3 → link_validate → sweep
+#         → analyze_sweep → mdl_predict → heatmap → diagrams → RESULTS.md → so sánh.
 # Mỗi bước in thời gian chạy; dừng ngay ở bước đầu tiên fail.
 # So sánh BẮT BUỘC (quyết định exit code): mọi file trong results/ được git theo dõi và report/RESULTS.md.
 # So sánh THÔNG TIN: các hình report/figures/*.png.
@@ -54,6 +54,10 @@ build() { (cd "$NS3_DIR" && ./ns3 build noc); }
 selftest() { "$BIN" --mode=selftest > "$NOC_RESULTS/selftest.txt"; }
 simcheck() { "$BIN" --mode=simcheck > "$NOC_RESULTS/simcheck.txt"; }
 phi() { "$BIN" --mode=phi --channels=1 --turns=1 > "$NOC_RESULTS/phi_all.txt"; }
+# Ví dụ 3×3 cho hình 2.3 của báo cáo (path và hop khác nhau).
+example() {
+    "$BIN" --mode=phi --W=3 --H=3 --routing=NF --traffic=transpose1 --channels=1 > "$NOC_RESULTS/example_3x3.txt"
+}
 py() { (cd "$REPO/scripts" && "$PY" "$@"); }
 
 step profile check_profile
@@ -61,11 +65,13 @@ step build build
 step selftest selftest
 step simcheck simcheck
 step phi phi
+step example example
 step link_validate py link_validate.py
 step sweep py sweep.py
 step analyze_sweep py analyze_sweep.py
 step mdl_predict py mdl_predict.py
 step heatmap py heatmap.py
+step diagrams py diagrams.py
 step results_md py make_results_md.py --results "$NOC_RESULTS" --out "$OUT/report/RESULTS.md"
 echo "tổng thời gian:      $(elapsed "$T_ALL")s"
 
