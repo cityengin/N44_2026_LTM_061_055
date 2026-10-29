@@ -201,7 +201,7 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
   (dòng PHITURN: lưu lượng hop từ cổng vào sang kênh ra, uniform đã chia N−1).
 - `make_results_md.py`: sinh report/RESULTS.md (kiểm kê bảng và hình, số đọc từ file, không gõ tay).
 - `reproduce.sh`: chạy lại toàn bộ (build → selftest → simcheck → phi → link_validate → sweep →
-  analyze_sweep → mdl_predict → heatmap → RESULTS.md) vào thư mục tạm, in thời gian từng bước, rồi so
+  analyze_sweep → mdl_predict → heatmap → diagrams → RESULTS.md; thêm example_3x3) vào thư mục tạm, in thời gian từng bước, rồi so
   từng byte với results/ và report/RESULTS.md đã commit; không ghi đè. Đầu ra phải tất định: không
   ghi thời gian chạy vào CSV, sweep.csv được sắp xếp theo khóa khi chạy xong, và dữ liệu được sắp xếp
   trước mọi phép lấy trung bình (thứ tự cộng số thực ảnh hưởng chữ số cuối). Thư mục output đổi được
@@ -221,6 +221,9 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
   Kiểm số thập phân: trong BẢNG phải khớp RESULTS.md hoặc file trong comment nguồn của bảng; trong VĂN BẢN
   khớp RESULTS.md, các file tổng hợp nhỏ, file trong comment nguồn ngay trước đoạn, HOẶC xuất hiện nguyên văn
   trong `<!-- suy-ra: … -->` ngay trước đoạn. --audit in từng số và file khớp với nó.
+- `scripts/diagrams.py`: hình minh họa report/figures/diag_*.png (lưới, hướng rẽ, path/hop 3×3, kiến trúc,
+  vòng đời gói ns-3). Hình path/hop đọc results/example_3x3.txt (`noc --mode=phi --W=3 --H=3 --routing=NF
+  --traffic=transpose1 --channels=1`); reproduce.sh tạo lại cả hai và so sánh.
 - `scripts/make_template.py`: tạo report/template.docx (A4, TNR 13, giãn dòng 1,5, lề 3/2/2/2 cm, số trang).
   Mẫu tạm, sẽ thay bằng mẫu của khoa.
 - Quy ước viết: số thập phân dùng dấu phẩy; hàng nghìn tách bằng U+00A0 ("1 586"), không dùng dấu chấm;
