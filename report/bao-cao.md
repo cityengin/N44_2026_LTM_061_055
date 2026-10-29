@@ -51,15 +51,17 @@ Giảng viên hướng dẫn: [ĐIỀN: GVHD]
 
 <!-- MUC-LUC -->
 
-# Danh mục hình {-}
+# Danh mục hình, bảng và đoạn mã {-}
+
+## Danh mục hình {-}
 
 <!-- DANH-MUC-HINH -->
 
-# Danh mục bảng {-}
+## Danh mục bảng {-}
 
 <!-- DANH-MUC-BANG -->
 
-# Danh mục đoạn mã {-}
+## Danh mục đoạn mã {-}
 
 <!-- DANH-MUC-DOAN-MA -->
 
@@ -418,6 +420,409 @@ vọng $\mathrm{PIR} \cdot \hat\rho^{\mathrm{hop}}(c)$, bất kể hàng đợi 
 ổn định. Vì vậy với router chọn ngẫu nhiên, cách chia theo nhánh là giá trị dự đoán đúng cho tải của từng kênh, còn cách
 chia theo đường chỉ đúng khi nguồn tự chọn trước cả đường đi (định tuyến tại nguồn). Chương 4 kiểm chứng nhận định này
 bằng mô phỏng, và chương 5 bàn về hệ quả của nó đối với ý nghĩa của ngưỡng PIR~max~.
+
+# Thiết kế và cài đặt
+
+## Kiến trúc tổng thể
+
+### Nguyên tắc "một hàm định tuyến"
+
+Phân tích các báo cáo trước cho thấy một nguồn lỗi dễ mắc khi tái hiện [1]: bộ tính routing pressure và router mô
+phỏng dùng hai bản cài đặt khác nhau của cùng một thuật toán, nên số liệu tĩnh và số liệu mô phỏng không còn nói về
+cùng một thứ (mục 4.5). Để loại bỏ khả năng này, toàn bộ chương trình chỉ có một hàm định tuyến `routeSet`. Hàm nhận
+thuật toán, tọa độ nút hiện tại, nút nguồn và nút đích, rồi trả về tập cổng hợp lệ dưới dạng bitmask theo thứ tự E, W,
+N, S. Việc chọn một cổng trong tập đó (selection) được tách thành một hàm riêng. Hình 3.1 cho thấy hai nhánh của chương
+trình cùng gọi `routeSet`: nhánh phân tích tĩnh (cây tìm kiếm, routing pressure, CDG) và nhánh mô phỏng ns-3 (router).
+
+<!-- nguồn: report/figures/diag_arch.png, scripts/diagrams.py, 5a6f060 -->
+
+![Hình 3.1: Kiến trúc chương trình: phân tích tĩnh và mô phỏng ns-3 cùng gọi một hàm định tuyến routeSet](figures/diag_arch.png){width=90%}
+
+Đoạn mã 3.1 trích phần chính của `routeSet`. Mọi thuật toán trừ OE chỉ cần dấu của $\Delta x$ và $\Delta y$; OE được
+tách thành hàm riêng vì cần thêm cột của nút hiện tại, nút nguồn và nút đích. Tập cổng rỗng nghĩa là gói đã tới đích.
+
+<!-- nguồn: noc/routing.cc, 950decd -->
+
+::: {custom-style="Table Caption"}
+Đoạn mã 3.1: Hàm định tuyến duy nhất routeSet (noc/routing.cc, rút gọn)
+:::
+
+```cpp
+DirSet
+routeSet(Algo algo, Coord cur, Coord src, Coord dst)
+{
+    const int dx = dst.x - cur.x;
+    const int dy = dst.y - cur.y; // dy < 0: cần đi N (y giảm)
+    if (dx == 0 && dy == 0)
+    {
+        return 0;
+    }
+    const DirSet ex = dx > 0 ? Bit(Dir::E) : (dx < 0 ? Bit(Dir::W) : 0);
+    const DirSet ey = dy > 0 ? Bit(Dir::S) : (dy < 0 ? Bit(Dir::N) : 0);
+
+    switch (algo)
+    {
+    case Algo::XY:
+        return ex != 0 ? ex : ey;
+    ...
+    case Algo::NF: {
+        // Đi hết các hướng âm (W, N) trước, sau đó mới đi hướng dương (E, S).
+        const DirSet neg = (dx < 0 ? Bit(Dir::W) : 0) | (dy < 0 ? Bit(Dir::N) : 0);
+        return neg != 0 ? neg : (ex | ey);
+    }
+    ...
+    case Algo::OE:
+        return OddEven(cur, src, dst, ey);
+    ...
+```
+
+### Tổ chức mã nguồn
+
+Mã C++ nằm trong thư mục `noc/` và được biên dịch thành một chương trình ns-3 duy nhất. Phần lõi (lưới, định tuyến,
+traffic, cây tìm kiếm, routing pressure, CDG) là C++ thuần, không phụ thuộc ns-3; chỉ các module mô phỏng dùng API của
+ns-3. Các script Python trong `scripts/` chạy chương trình song song, tổng hợp kết quả thành CSV, vẽ hình và kiểm tra
+tính tái lập. Bảng 3.1 liệt kê các module.
+
+<!-- nguồn: noc/noc.cc, scripts/reproduce.sh, 5a6f060 -->
+
+Table: Bảng 3.1: Các module của chương trình
+
+| Module | Trách nhiệm |
+|---|---|
+| `topology` | Lưới W×H, chuyển đổi id ↔ tọa độ, láng giềng, danh sách kênh có hướng |
+| `routing` | `routeSet`: tập cổng hợp lệ của XY, YX, NF, NF (bài báo), OE, FULL |
+| `traffic` | Sinh luồng uniform, transpose1, transpose2; hệ số chuẩn hóa $w$ |
+| `searchtree` | `ForEachPath`: duyệt mọi đường hợp lệ của một cặp, kèm xác suất theo nhánh |
+| `phi` | Channel pressure theo path và hop, φ, PIR~max~, lưu lượng theo hướng rẽ |
+| `cdg` | Dựng CDG từ mọi đường hợp lệ, tìm chu trình |
+| `noc-header`, `timestamp-tag` | Header 10 byte được tuần tự hóa vào gói; Tag ghi thời điểm tạo gói |
+| `selection` | Chọn đều một cổng trong tập cổng |
+| `noc-router` | Router: nhận gói qua callback, gọi `routeSet` và selection, gửi qua NetDevice |
+| `noc-sim` | Dựng mạng ns-3, sinh traffic, gắn trace, thống kê; kiểm tra `simcheck` |
+| `selftest` | Bộ tự kiểm thử |
+| `noc.cc` | Chương trình chính: đọc tham số dòng lệnh, chọn chế độ phi, selftest, sim, simcheck |
+| `scripts/*.py`, `reproduce.sh` | Chạy song song, tổng hợp CSV, vẽ hình, mô hình hàng đợi, tái lập |
+
+Mỗi chế độ in kết quả thành các dòng máy đọc được dạng `RESULT,key=value,...`, nhờ đó script Python không phải phân
+tích văn bản tự do và mọi con số trong báo cáo đều truy được về một dòng output cụ thể.
+
+## Bộ tính routing pressure và kiểm tra deadlock
+
+### Cây tìm kiếm
+
+Hàm `ForEachPath` cài đặt trực tiếp cây tìm kiếm của [1] bằng duyệt theo chiều sâu (DFS). Xuất phát từ nút nguồn, tại
+mỗi nút hàm gọi `routeSet` để lấy tập cổng, rồi lần lượt đi theo từng cổng cho tới khi gặp nút đích. Mỗi lá của cây là
+một đường hợp lệ. Cùng với dãy nút của đường, hàm trả về xác suất của đường theo cách chia theo nhánh, tức tích các
+$1/|R(v)|$ dọc đường. Nếu tại một nút chưa phải đích mà tập cổng rỗng, chương trình dừng với lỗi, vì điều đó nghĩa là
+thuật toán định tuyến bị cài sai. Với lưới 7×7, cặp xa nhất có 924 đường với FULL, nên việc duyệt hết mọi đường của
+mọi cặp vẫn chạy nhanh.
+
+### Channel pressure, routing pressure và PIR~max~
+
+Từ một lần duyệt, bộ tính cộng đồng thời hai đại lượng cho mỗi kênh: $k_i(c)/p_i$ (cách chia theo đường) và tổng xác
+suất của các đường đi qua kênh (cách chia theo nhánh). Cộng qua mọi luồng của mẫu lưu lượng và nhân hệ số $w$ cho ra
+$\hat\rho(c)$ theo hai cách; giá trị lớn nhất là $\varphi$, và PIR~max~ = 0,0625/φ. Chế độ `--mode=phi` in một dòng
+`RESULT` cho mỗi tổ hợp thuật toán, mẫu lưu lượng và cách chia. Tùy chọn `--channels` in thêm channel pressure của
+từng kênh (dòng `CHAN`), còn `--turns` in lưu lượng theo nhánh từ mỗi cổng vào sang mỗi kênh ra (dòng `PHITURN`), dùng
+cho mô hình hàng đợi ở mục 4.4.
+
+### Kiểm tra CDG
+
+Hàm `CheckCdg` dùng lại `ForEachPath` để liệt kê mọi đường của mọi cặp nguồn–đích và thêm cạnh giữa hai kênh liên tiếp
+trên mỗi đường. Chu trình được tìm bằng DFS ba màu (trắng: chưa thăm; xám: đang trên ngăn xếp; đen: đã xong); gặp một
+đỉnh xám nghĩa là có chu trình, và chương trình in chu trình đó làm bằng chứng. FULL được dùng làm đối chứng âm: nếu
+bộ dò chu trình không tìm ra chu trình của FULL thì chính bộ dò bị sai.
+
+## Mô hình mô phỏng trên ns-3
+
+### Mô phỏng sự kiện rời rạc
+
+ns-3 [7] là bộ mô phỏng mạng theo sự kiện rời rạc (discrete-event simulation): trạng thái hệ thống chỉ thay đổi tại các
+thời điểm có sự kiện, và bộ lập lịch `Simulator` lấy lần lượt sự kiện có thời điểm nhỏ nhất ra thực thi. Đề tài quy
+ước một chu kỳ của NoC bằng 1 ns thời gian mô phỏng. Các sự kiện chính gồm: một nút tạo gói, một thiết bị bắt đầu và
+kết thúc truyền một khung, và một gói tới thiết bị ở nút kế tiếp. Hình 3.2 mô tả vòng đời của một gói qua các lời gọi
+hàm và sự kiện đó, cùng với trục thời gian của một lần chạy.
+
+<!-- nguồn: report/figures/diag_ns3.png, scripts/diagrams.py, 5a6f060 -->
+
+![Hình 3.2: Mô hình ns-3: (a) vòng đời của một gói, (b) trục thời gian warmup, measure, drain](figures/diag_ns3.png){width=100%}
+
+### Nút, NetDevice và kênh điểm–điểm
+
+Mỗi router là một `Node` của ns-3. Mỗi cặp nút láng giềng được nối bằng một link `PointToPoint` hai chiều, tương ứng
+hai kênh có hướng của lưới. Link có tốc độ 16 Gbps, độ trễ lan truyền 0 và khoảng cách giữa hai khung bằng 0. Mỗi
+thiết bị có hàng đợi `DropTailQueue` rất lớn (100 000 gói), nên trong thực tế hàng đợi không bao giờ tràn và mô hình
+tương đương hàng đợi không giới hạn.
+
+Đề tài không cài Internet stack (IP, UDP) vì NoC không cần định địa chỉ IP; router gửi gói trực tiếp xuống tầng
+NetDevice bằng `NetDevice::Send`. Vì `PointToPointNetDevice` chỉ chấp nhận các giao thức mà nó ánh xạ được sang trường
+protocol của PPP, gói được gửi với mã giao thức `0x0800` (IPv4) dù nội dung không phải IP. Để nhận gói, router đăng ký
+một callback bằng `SetReceiveCallback`. Callback này phải được đăng ký sau khi `PointToPointHelper::Install` gắn thiết
+bị vào nút, vì `Node::AddDevice` ghi đè callback nhận đã có; vì vậy router chỉ được gắn vào thiết bị (hàm
+`AttachDevice` trong Đoạn mã 3.4) sau khi toàn bộ link đã được dựng. Đoạn mã 3.2 trình bày phần dựng link.
+
+<!-- nguồn: noc/noc-sim.cc, 433b8a8 -->
+
+::: {custom-style="Table Caption"}
+Đoạn mã 3.2: Dựng các link điểm–điểm giữa các nút láng giềng (noc/noc-sim.cc)
+:::
+
+```cpp
+    PointToPointHelper p2p;
+    p2p.SetDeviceAttribute("DataRate", StringValue("16Gbps"));
+    p2p.SetDeviceAttribute("InterframeGap", TimeValue(Seconds(0)));
+    p2p.SetChannelAttribute("Delay", TimeValue(Seconds(0)));
+    p2p.SetQueue("ns3::DropTailQueue<Packet>", "MaxSize", StringValue("100000p"));
+
+    // devs[id][dir]: device trên node id nối tới hàng xóm theo hướng dir (id logic = y·W + x).
+    std::vector<std::array<Ptr<NetDevice>, kNumLinkDirs>> devs(n);
+    for (int u = 0; u < n; ++u)
+    {
+        for (Dir d : {Dir::E, Dir::S}) // mỗi link PPP hai chiều chỉ cài một lần
+        {
+            const int v = mesh.Neighbor(u, d);
+            if (v < 0)
+            {
+                continue;
+            }
+            NetDeviceContainer pair = p2p.Install(nodes.Get(u), nodes.Get(v));
+            devs[u][static_cast<int>(d)] = pair.Get(0);
+            devs[v][static_cast<int>(Opposite(d))] = pair.Get(1);
+        }
+    }
+```
+
+### Định dạng khung và tuần tự hóa header
+
+Để một gói chiếm kênh đúng 16 chu kỳ như mô hình của [1], kích thước khung trên dây được chọn sao cho thời gian truyền
+bằng 16 ns: $32\ \text{byte} \times 8 / 16\ \text{Gbps} = 16\ \text{ns}$. Khung 32 byte gồm header PPP 2 byte do
+`PointToPointNetDevice` thêm vào, header riêng của đề tài `NoCHeader` 10 byte và 20 byte payload (Bảng 3.2).
+
+<!-- nguồn: noc/noc-header.cc, noc/noc-header.h, results/selftest.txt, c7f4ea5 -->
+
+Table: Bảng 3.2: Bố cục khung 32 byte trên dây
+
+| Thành phần | Trường | Byte | Ý nghĩa |
+|---|---|---|---|
+| Header PPP | protocol | 2 | ns-3 ánh xạ `0x0800` sang mã PPP của IPv4 |
+| NoCHeader | src | 2 | id nút nguồn |
+| | dst | 2 | id nút đích |
+| | seq | 4 | số thứ tự, dùng để ghép gói với thời điểm tạo |
+| | hops | 2 | số hop đã đi, tăng 1 ở mỗi router nhận |
+| Payload | — | 20 | phần đệm để khung đủ 32 byte |
+| Tổng | | 32 | thời gian truyền 16 ns ở 16 Gbps |
+
+`NoCHeader` kế thừa lớp `ns3::Header`, nên phải tự cài các hàm tuần tự hóa: `GetSerializedSize` cho biết số byte,
+`Serialize` ghi các trường vào bộ đệm của gói theo thứ tự byte mạng (big-endian), và `Deserialize` đọc lại theo đúng
+thứ tự đó (Đoạn mã 3.3). Thời điểm tạo gói không được ghi vào header mà gắn vào gói dưới dạng `Tag` (`CreationTimeTag`).
+Tag là siêu dữ liệu đi kèm đối tượng gói trong bộ mô phỏng, không được truyền trên dây, nên không làm tăng kích thước
+khung. Mỗi khung bắt đầu truyền đều được kiểm tra ở trace `PhyTxBegin`: nếu kích thước khác 32 byte, chương trình dừng.
+
+<!-- nguồn: noc/noc-header.cc, c69dda5 -->
+
+::: {custom-style="Table Caption"}
+Đoạn mã 3.3: Tuần tự hóa NoCHeader (noc/noc-header.cc)
+:::
+
+```cpp
+uint32_t
+NoCHeader::GetSerializedSize() const
+{
+    return 2 + 2 + 4 + 2;
+}
+
+void
+NoCHeader::Serialize(ns3::Buffer::Iterator start) const
+{
+    start.WriteHtonU16(m_src);
+    start.WriteHtonU16(m_dst);
+    start.WriteHtonU32(m_seq);
+    start.WriteHtonU16(m_hops);
+}
+
+uint32_t
+NoCHeader::Deserialize(ns3::Buffer::Iterator start)
+{
+    m_src = start.ReadNtohU16();
+    m_dst = start.ReadNtohU16();
+    m_seq = start.ReadNtohU32();
+    m_hops = start.ReadNtohU16();
+    return GetSerializedSize();
+}
+```
+
+### Router
+
+Router (`NocRouter`) xử lý gói theo hai hàm (Đoạn mã 3.4). Khi thiết bị nhận xong một khung, ns-3 gọi `Receive`. Hàm
+này tách `NoCHeader` khỏi gói, tăng số hop và kiểm tra đích. Nếu gói đã tới đích, router đọc `CreationTimeTag` để tính
+độ trễ và giao gói cho bộ thống kê. Nếu chưa, router gắn lại header và gọi `Forward`. `Forward` gọi `routeSet` với tọa
+độ của nút hiện tại, nguồn và đích lấy từ header, chọn một cổng bằng `SelectUniform`, rồi gửi gói qua thiết bị tương
+ứng. Nếu kênh đang bận, gói nằm trong hàng đợi của thiết bị cho tới khi kênh rảnh; vì thiết bị chỉ bắt đầu truyền khi
+đã nhận trọn khung, router hoạt động theo kiểu store-and-forward.
+
+<!-- nguồn: noc/noc-router.cc, 32f4e9a -->
+
+::: {custom-style="Table Caption"}
+Đoạn mã 3.4: Nhận và chuyển tiếp gói trong NocRouter (noc/noc-router.cc, rút gọn)
+:::
+
+```cpp
+void
+NocRouter::AttachDevice(Dir d, ns3::Ptr<ns3::NetDevice> dev)
+{
+    m_devs[static_cast<int>(d)] = dev;
+    dev->SetReceiveCallback(ns3::MakeCallback(&NocRouter::Receive, this));
+}
+...
+    ns3::Ptr<ns3::Packet> p = packet->Copy();
+    NoCHeader hdr;
+    p->RemoveHeader(hdr);
+    hdr.SetHops(hdr.GetHops() + 1);
+    if (hdr.GetDst() == m_id)
+    {
+        CreationTimeTag tag;
+        NS_ABORT_MSG_UNLESS(p->PeekPacketTag(tag), "gói thiếu CreationTimeTag");
+        m_deliver(hdr, tag.GetCreatedNs());
+        return true;
+    }
+    p->AddHeader(hdr);
+    Forward(p, hdr);
+    return true;
+}
+...
+    const DirSet s = routeSet(m_algo,
+                              m_mesh.ToCoord(m_id),
+                              m_mesh.ToCoord(hdr.GetSrc()),
+                              m_mesh.ToCoord(hdr.GetDst()));
+    const Dir d = SelectUniform(s, m_selectRv);
+    ns3::Ptr<ns3::NetDevice> dev = m_devs[static_cast<int>(d)];
+    NS_ABORT_MSG_UNLESS(dev, "node " << m_id << " không có link theo hướng " << DirName(d));
+    // Send trả false khi queue tràn; drop được đếm qua trace "Drop" của queue.
+    dev->Send(packet, dev->GetBroadcast(), 0x0800);
+}
+```
+
+Số gói bị hủy được đếm qua trace `Drop` của hàng đợi và trace `PhyRxDrop` của thiết bị. Trong mọi lần chạy của đề tài,
+số gói bị hủy bằng 0.
+
+### Sinh lưu lượng và số ngẫu nhiên
+
+Mỗi nút phát gói theo quá trình Bernoulli: ở mỗi chu kỳ, nút tạo một gói với xác suất PIR. Thay vì lập lịch một sự kiện
+mỗi chu kỳ, chương trình rút khoảng cách tới lần phát kế tiếp từ phân phối hình học, nên số sự kiện tỉ lệ với số gói
+chứ không tỉ lệ với số chu kỳ. Bài báo [1] dùng khoảng cách theo phân phối mũ. Hai phân phối có cùng kỳ vọng; hệ số biến
+thiên (CV) của phân phối hình học là $\sqrt{1 - \mathrm{PIR}}$, rất gần 1 là CV của phân phối mũ.
+
+<!-- nguồn: results/sweep.csv, c7f4ea5 -->
+<!-- suy-ra: PIR lớn nhất trong sweep.csv là 0,0464282 = 1,3 × 0,035714 (XY uniform); CV = √(1 − 0,0464282) = 0,9765 ≈ 0,977 -->
+
+Với PIR lớn nhất trong các lần quét (0,0464282), CV vẫn bằng khoảng 0,977, nên khác biệt giữa hai phân phối là không
+đáng kể.
+
+Mỗi router có ba luồng số ngẫu nhiên riêng, đánh theo id logic $\mathrm{id} = y \cdot W + x$ chứ không theo thứ tự tạo
+nút của ns-3: luồng $3\,\mathrm{id}$ dùng để chọn cổng, luồng $3\,\mathrm{id}+1$ cho khoảng cách giữa các lần phát, và
+luồng $3\,\mathrm{id}+2$ để chọn đích với mẫu uniform. Cùng tham số `--RngRun` thì cùng kết quả. Vì hai luồng sinh lưu
+lượng không phụ thuộc thuật toán định tuyến, các cấu hình chạy với cùng mẫu lưu lượng, cùng PIR và cùng RngRun nhận
+đúng cùng một tập gói. Kỹ thuật này gọi là common random numbers (CRN, dùng chung số ngẫu nhiên): hiệu độ trễ giữa hai
+thuật toán trên cùng RngRun loại được phần lớn nhiễu do sinh lưu lượng, nên khoảng tin cậy của hiệu hẹp hơn nhiều so
+với khi chạy độc lập. Đổi lại, mọi cấu hình cùng RngRun chung một nhiễu sinh lưu lượng, nên không được coi các kênh hay
+các cấu hình là các mẫu độc lập.
+
+### Cửa sổ đo và các chỉ số
+
+Mỗi lần chạy gồm ba pha (Hình 3.2b). Pha warmup đưa mạng về trạng thái dừng, gói vẫn được tạo nhưng không được thống
+kê. Trong cửa sổ đo dài measure chu kỳ, mọi gói được tạo ra đều được ghi lại. Sau cửa sổ đo là pha drain: các nút vẫn
+tiếp tục phát để giữ nguyên mức tải, và lần chạy dừng khi mọi gói của cửa sổ đo đã tới đích, hoặc khi hết thời gian
+drain. Các lần quét tải dùng warmup 10 000, measure 20 000 và drain 20 000 chu kỳ. Các chỉ số chính gồm:
+
+- độ trễ lat_avg, đo từ lúc tạo gói, nên gồm cả thời gian chờ ở hàng đợi của nút nguồn;
+- throughput: số flit tới đích trong cửa sổ đo chia cho số nút và độ dài cửa sổ; offered: số flit được tạo, chuẩn hóa
+  tương tự;
+- saturated: bằng 1 nếu hết pha drain mà còn gói của cửa sổ chưa tới đích; khi đó lat_avg_lb tính cả các gói này với
+  độ trễ lấy bằng thời điểm dừng trừ thời điểm tạo (cận dưới);
+- độ sử dụng đo được của từng kênh $U_{\text{đo}}(c)$: số khung bắt đầu truyền trong cửa sổ đo nhân 16 rồi chia cho
+  measure; u_max là giá trị lớn nhất trên mọi kênh.
+
+Lưu ý saturated = 0 không có nghĩa là mạng chưa bão hòa: pha drain đủ dài vẫn xả hết hàng đợi dù tải vượt ngưỡng. Vì
+vậy chương 4 xác định bão hòa dựa trên throughput/offered, độ trễ và u_max.
+
+## Chiến lược kiểm thử
+
+### Bộ tự kiểm thử
+
+Chế độ `--mode=selftest` chạy toàn bộ bộ tự kiểm thử trong khoảng một giây và trả mã thoát khác 0 nếu có kiểm tra HARD
+bị sai. Mọi thay đổi chỉ được đưa lên nhánh chính khi chương trình biên dịch sạch và bộ tự kiểm thử đạt. Các kiểm tra
+HARD là những tính chất phải đúng tuyệt đối: bất biến của hàm định tuyến, luật cấm rẽ (kèm đối chứng âm để chắc rằng
+bộ kiểm tra bắt được vi phạm), số đường, bảo toàn lưu lượng, đối xứng gương giữa hai quy ước NF, CDG, và các tính chất
+của mô phỏng. Ví dụ, một gói đi XY từ nút 0 tới nút 48 qua 12 hop trên mạng rỗng phải có độ trễ đúng 192 chu kỳ, tức
+16 chu kỳ mỗi hop; kiểm tra này bắt được ngay các lỗi thừa byte trong khung hoặc lệch đơn vị thời gian. Các kiểm tra
+SOFT so kết quả với các mốc của [1] và chỉ in MATCH hoặc MISMATCH, không làm hỏng mã thoát, vì theo nguyên tắc của đề tài,
+khi kết quả không khớp với bài báo thì phải báo cáo chứ không được sửa chương trình để ép ra số. Bảng 3.3 tóm tắt bộ
+tự kiểm thử.
+
+<!-- nguồn: results/selftest.txt, c7f4ea5 -->
+
+Table: Bảng 3.3: Bộ tự kiểm thử (--mode=selftest)
+
+| Nhóm | Nội dung | Số kiểm tra | Kết quả |
+|---|---|---|---|
+| Lưới, traffic, khung | id ↔ tọa độ, láng giềng, số kênh từ 1×1 tới 7×7, số luồng, bố cục khung 32 byte, Header và Tag | 13 | 13 PASS |
+| Định tuyến và số đường | tập cổng khác rỗng khi chưa tới đích và chỉ gồm hướng tối thiểu, độ dài đường, luật cấm rẽ và đối chứng âm, số đường mọi cặp, số đường 0→48, đối xứng NF | 66 | 66 PASS |
+| Channel pressure | tổng xác suất theo nhánh bằng 1, bảo toàn lưu lượng, ρ nguyên với thuật toán tất định, đối xứng gương từng kênh, bảo toàn lưu lượng theo hướng rẽ | 72 | 72 PASS |
+| CDG | không chu trình với XY, YX, hai quy ước NF, OE; FULL có chu trình | 12 | 12 PASS |
+| Selection và mô phỏng | chọn cổng đều, percentile, một gói 12 hop mất 192 chu kỳ, khung 32 byte, độ trễ ≥ 16·hops, số hop, u_max, tính tất định, khôi phục RngRun | 18 | 18 PASS |
+| Mốc của [1] (SOFT) | φ theo path và hop so với các mốc của bài báo | 18 | 11 MATCH, 7 MISMATCH |
+
+Bảy trường hợp MISMATCH đều là các tổ hợp mà đề tài dự đoán trước sẽ lệch: cách chia theo đường với OE và NF, và NF
+theo quy ước chính (mục 4.1).
+
+### Kiểm tra mô phỏng ở tải thấp
+
+Chế độ `--mode=simcheck` chạy lâu hơn nên không nằm trong bộ tự kiểm thử. Ở PIR = 0,001, gần như không có xung đột,
+nên mô phỏng phải khớp các giá trị tính tay. Có bốn kiểm tra cho mỗi mẫu transpose với XY:
+
+- (hard) mọi gói có độ trễ ≥ 16·hops;
+- (model) độ trễ trung bình trừ 16 lần số hop trung bình, tức thời gian chờ trung bình, nằm trong khoảng 0 đến 1 chu kỳ;
+- (stat) số hop trung bình khớp giá trị lý thuyết $224/42$ trong phạm vi 4 sai số chuẩn;
+- (stat) không có gói bị hủy hay chưa tới đích, và throughput lệch không quá 5% so với giá trị lý thuyết.
+
+Ngoài ra, NF theo quy ước chính với transpose1 phải cho cùng độ trễ và throughput (trong khoảng tin cậy 95%) với NF
+(bài báo) với transpose2, vì hai cấu hình là ảnh gương của nhau. Bảng 3.4 cho kết quả.
+
+<!-- nguồn: results/simcheck.txt, c7f4ea5 -->
+
+Table: Bảng 3.4: Kết quả simcheck
+
+| Kiểm tra | Mẫu | Giá trị đo | Ngưỡng | Kết quả |
+|---|---|---|---|---|
+| độ trễ ≥ 16·hops (min của độ trễ − 16·hops) | transpose1 | 0 | ≥ 0 | PASS |
+| | transpose2 | 0 | ≥ 0 | PASS |
+| thời gian chờ trung bình (chu kỳ) | transpose1 | 0,540913 | [0, 1] | PASS |
+| | transpose2 | 0,627314 | [0, 1] | PASS |
+| số hop trung bình (z) | transpose1 | 5,376308 (0,935) | \|z\| ≤ 4 | PASS |
+| | transpose2 | 5,351767 (0,399) | \|z\| ≤ 4 | PASS |
+| throughput (sai lệch tương đối) | transpose1 | 0,006867 (0,001429) | ≤ 0,05 | PASS |
+| | transpose2 | 0,006792 (0,009524) | ≤ 0,05 | PASS |
+| đối xứng gương: hiệu lat_avg | NF/t1 so với NF (bài báo)/t2 | 0,501878 | ≤ 1,766331 | PASS |
+| đối xứng gương: hiệu throughput | | 0,000217 | ≤ 0,001046 | PASS |
+
+## Tái lập kết quả
+
+Toàn bộ số liệu trong báo cáo được sinh lại từ đầu bằng một lệnh, `scripts/reproduce.sh`. Script chạy lần lượt: biên
+dịch, bộ tự kiểm thử, simcheck, tính routing pressure, ví dụ 3×3, kiểm chứng tải từng kênh, quét tải, phân tích bão
+hòa, mô hình hàng đợi, vẽ hình và sinh bảng tổng hợp `report/RESULTS.md`. Mọi output được ghi vào một thư mục tạm, sau
+đó so từng byte với các file đã lưu trong kho mã; script không bao giờ ghi đè kết quả đã lưu, và báo file cùng dòng đầu
+tiên khác nếu có.
+
+Để kết quả giống từng byte giữa các lần chạy, đề tài áp dụng ba biện pháp:
+
+- chương trình được biên dịch ở profile release (`-O3`) mà không bật `-march=native`, vì tối ưu theo từng máy có thể
+  sinh lệnh FMA làm thay đổi chữ số cuối của phép tính số thực;
+- không ghi thời gian chạy vào file kết quả, và các dòng CSV được sắp xếp theo khóa sau khi các tiến trình song song
+  chạy xong;
+- dữ liệu được sắp xếp trước mọi phép lấy trung bình, vì thứ tự cộng số thực ảnh hưởng tới chữ số cuối.
+
+Phiên bản kết quả dùng trong báo cáo được đánh dấu bằng tag `v1.0-results` trong kho mã. Các phần bổ sung sau đó (ví dụ
+3×3 và các hình minh họa) cũng được đưa vào `reproduce.sh` và được so sánh theo cùng cách.
 
 # Tài liệu tham khảo {-}
 
