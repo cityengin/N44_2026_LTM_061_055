@@ -39,7 +39,23 @@ Giảng viên hướng dẫn: [ĐIỀN: GVHD]
 
 # Tóm tắt {-}
 
-[Sẽ viết sau khi hoàn thành chương 6.]
+Bài báo của Tang, Lin và Palesi [1] đề xuất routing pressure (áp lực định tuyến): channel pressure lớn nhất mà một thuật
+toán định tuyến dồn lên một kênh của Network-on-Chip, dùng để ước lượng tốc độ phát gói tối đa PIR~max~ trước khi mạng
+nghẽn. Đề tài tái hiện và kiểm chứng thước đo này trên lưới 7×7 với XY, YX, negative-first (NF), odd-even (OE) và ba
+mẫu lưu lượng.
+
+Một hàm định tuyến duy nhất được dùng chung cho bộ tính routing pressure theo hai cách hiểu "chia đều" (theo đường và
+theo nhánh), cho kiểm tra deadlock, và cho router của một mô hình store-and-forward xây trên tầng NetDevice của ns-3.
+Mọi kết quả được sinh lại bằng một script và trùng khớp từng byte.
+
+Cách chia theo nhánh, với NF coi Tây và Nam là hướng âm, tái hiện mọi mốc của bài báo (OE 4,8125 so với 4,81; NF với
+transpose2 2,40625 so với 2,41), còn cách chia theo đường cho OE 4,361905. Độ sử dụng đo được trên từng kênh khớp dự
+đoán theo nhánh với R² = 0,9998 (theo đường: 0,9642). Theo độ sử dụng của kênh bận nhất, cả 15 cấu hình bão hòa ở
+pir_ratio từ 0,9554 tới 0,9975. Một mô hình hàng đợi M/D/1 bỏ phần tự xung đột giữ đúng thứ tự điểm gãy độ trễ của mọi
+cấu hình. Đề tài cũng chỉ ra báo cáo trước [9] đã dùng hai định nghĩa NF khác nhau cho routing pressure và cho mô phỏng.
+
+Hạn chế: với store-and-forward và hàng đợi không giới hạn, việc bão hòa tại PIR~max~ gần như là hệ quả của bảo toàn lưu
+lượng; routing pressure chưa được kiểm chứng khi router có backpressure; công thức bỏ phần tự xung đột là heuristic.
 
 # Bảng phân công công việc {-}
 
@@ -274,9 +290,10 @@ trên mỗi đường. Nhờ đó CDG chỉ chứa các phụ thuộc thực s�
 ### Turn model
 
 Glass và Ni [3] nhận xét rằng trên lưới 2D có tám hướng rẽ 90°. Tám hướng rẽ này tạo thành hai chu trình trừu tượng,
-một theo chiều kim đồng hồ (E→S, S→W, W→N, N→E) và một ngược chiều kim đồng hồ (E→N, N→W, W→S, S→E). Mọi vòng chờ trên
-lưới đều phải dùng đủ bốn hướng rẽ của một trong hai chu trình đó. Vì vậy, để tránh deadlock, cần cấm ít nhất một
-hướng rẽ trong mỗi chu trình; tuy nhiên không phải mọi cách chọn hai hướng rẽ đều đủ để CDG không có chu trình [3].
+một theo chiều kim đồng hồ (E→S, S→W, W→N, N→E) và một ngược chiều kim đồng hồ (E→N, N→W, W→S, S→E). Hai chu trình này là các vòng chờ đơn giản nhất trên
+lưới, nên để tránh deadlock cần cấm ít nhất một hướng rẽ trong mỗi chu trình. Điều kiện này cần nhưng chưa đủ: ba lần rẽ
+theo một chiều có tác dụng như một lần rẽ theo chiều ngược lại, nên với một số cách chọn hai hướng rẽ bị cấm, các hướng
+rẽ còn lại vẫn ghép được thành chu trình phức tạp hơn [3].
 Cách tiếp cận cấm rẽ này gọi là turn model (mô hình rẽ). Hình 2.2 cho thấy các hướng rẽ bị cấm của từng thuật toán
 dùng trong đề tài.
 
