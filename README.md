@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="banner.svg" alt="NoC Routing Pressure — ns-3.48" width="100%">
+</p>
+
 # NoC Routing Pressure (ns-3.48)
 
 > **Đồ án môn Lập trình mạng**  
@@ -47,6 +51,7 @@ Dự án đồng thời làm rõ bản chất lý thuyết, giải mã các đi�
 noc-routing-pressure/
 ├── CLAUDE.md                    # Quy ước kỹ thuật, đặc tả mốc kiểm thử và quy trình Git
 ├── README.md                    # Tài liệu giới thiệu dự án
+├── banner.svg                   # Banner đồ họa dự án
 ├── docs/                        # Tài liệu tham khảo gốc (Tang 2015 và các báo cáo cũ)
 ├── noc/                         # Mã nguồn C++ mô phỏng NoC trên ns-3 (symlink vào scratch/noc)
 │   ├── topology.{h,cc}          # Lưới 2D Mesh (ánh xạ ID, tọa độ, kênh có hướng)
@@ -91,9 +96,9 @@ noc-routing-pressure/
 
 ### Yêu cầu môi trường
 * Hệ điều hành Linux (khuyến nghị Ubuntu 22.04 / 24.04).
-* C++23 (GCC $\ge$ 13 hoặc Clang $\ge$ 17).
+* C++23 (GCC ≥ 13 hoặc Clang ≥ 17).
 * **ns-3 phiên bản 3.48** được cài đặt tại `~/ns-3-dev`.
-* Python $\ge$ 3.10 với môi trường ảo tại `~/noc-routing-pressure/.venv`.
+* Python ≥ 3.10 với môi trường ảo tại `~/noc-routing-pressure/.venv`.
 
 ### 1. Thiết lập symlink vào ns-3
 Thư mục `noc/` được liên kết vào thư mục `scratch/noc` của ns-3:
