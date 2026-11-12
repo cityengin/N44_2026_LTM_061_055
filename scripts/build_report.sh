@@ -30,6 +30,8 @@ else
 fi
 # Bỏ cảnh báo của pandoc 3.1.3 về file dịch vi.yaml có sẵn bị lỗi (không ảnh hưởng nội dung; caption tự gõ số).
 "$PANDOC" "$TMP/bao-cao.md" "${args[@]}" 2> >(grep -v -E 'translation|vi\.yaml|Aeson|Invalid Term' >&2)
+# Mục danh sách dùng style ListCompact (như thân bài) thay cho Compact của ô bảng.
+[[ -f "$TEMPLATE" ]] && "$PY" "$REPO/scripts/fix_docx.py" "$OUT"
 echo "# đã ghi $OUT ($(du -h "$OUT" | cut -f1))"
 
 echo "# Nhắc việc trước khi nộp:"

@@ -11,6 +11,7 @@ Dùng: .venv/bin/python scripts/make_template.py [--out report/template.docx]
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 import zipfile
@@ -46,10 +47,15 @@ STYLES = {
                      extra='<w:link w:val="BodyTextChar"/>'),
     "FirstParagraph": para("FirstParagraph", "First Paragraph", based="BodyText",
                            extra='<w:next w:val="BodyText"/>', custom=True),
-    # Ô bảng và danh sách gọn: không thụt dòng, giãn dòng 1,15, cỡ 12.
+    # Ô bảng: không thụt dòng, giãn dòng 1,15, cỡ 12.
     "Compact": para("Compact", "Compact",
                     '<w:spacing w:before="36" w:after="36" w:line="276" w:lineRule="auto"/><w:jc w:val="left"/>',
                     '<w:sz w:val="24"/><w:szCs w:val="24"/>', custom=True),
+    # Mục danh sách (gạch đầu dòng, đánh số, mã giả): như thân bài, cỡ 13, giãn dòng 1,5, căn đều.
+    # scripts/fix_docx.py chuyển các đoạn Compact có đánh số sang style này sau pandoc.
+    "ListCompact": para("ListCompact", "List Compact",
+                        '<w:spacing w:before="0" w:after="60" w:line="360" w:lineRule="auto"/><w:jc w:val="both"/>',
+                        custom=True),
     "Title": para("Title", "Title", '<w:keepNext/><w:spacing w:before="240" w:after="240"/><w:jc w:val="center"/>',
                   '<w:b/><w:bCs/><w:sz w:val="32"/><w:szCs w:val="32"/>', extra='<w:next w:val="BodyText"/>'),
     "Subtitle": para("Subtitle", "Subtitle", '<w:spacing w:before="120" w:after="120"/><w:jc w:val="center"/>',
@@ -154,7 +160,7 @@ def fix_styles(xml: str) -> str:
 
 
 def build(out: Path) -> None:
-    ref = subprocess.run(["pandoc", "--print-default-data-file", "reference.docx"],
+    ref = subprocess.run([os.environ.get("PANDOC", "pandoc"), "--print-default-data-file", "reference.docx"],
                          capture_output=True, check=True).stdout
     tmp = out.with_suffix(".pandoc-default.docx")
     tmp.write_bytes(ref)
