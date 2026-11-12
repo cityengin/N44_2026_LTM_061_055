@@ -28,11 +28,11 @@ Dự án đồng thời làm rõ bản chất lý thuyết, giải mã các đi�
 1. **Phân định hai phương pháp tính $\phi$ (`path` vs `hop`):**
    * **`path` ($k/p$):** Chia đều xác suất theo số đường đi tối thiểu giữa cặp nguồn–đích ($k$ đường qua kênh / $p$ tổng số đường).
    * **`hop` (tại mỗi chặng):** Chia đều xác suất rẽ nhánh tại từng router trung gian (tương ứng với router chọn ngẫu nhiên đều 1 cổng hợp lệ).
-   * *Thực nghiệm:* Đối chiếu độ sử dụng đo được trên từng kênh chứng minh độ sử dụng kênh đo được trong ns-3 khớp hoàn hảo với phương pháp `hop` ($R^2 = 0,99986$, slope $\approx 0,999$, RMSE $\approx 0,0029$). Báo cáo cũ tính theo `path` nên bị lệch với mô phỏng và bài báo.
+   * *Thực nghiệm:* Độ sử dụng đo được trên từng kênh trong ns-3 khớp với dự đoán theo `hop` ($R^2 = 0,9998$, hệ số góc $0,9993$, RMSE $0,0033$), trong khi dự đoán theo `path` chỉ đạt $R^2 = 0,9642$. Báo cáo trước tính theo `path` nên lệch với mô phỏng và bài báo.
 
 2. **Giải mã nghịch lý quy ước Negative-First (NF vs `NF_WS`):**
-   * Quy ước Turn Model chuẩn (Glass & Ni 1994, Chiu 2000): hướng âm là Tây (W) và Bắc (N). Dưới quy ước này với `transpose2`, NF là tất định nên áp lực kênh luôn là số nguyên (không thể đạt giá trị $2,41$ như bài báo).
-   * Dự án phát hiện simulator Noxim trong bài báo Tang 2015 coi hướng âm là Tây (W) và Nam (S). Bằng phép đối xứng gương qua trục $y$, dự án bổ sung biến thể chẩn đoán **`NF_WS`** (ghi nhãn *"NF (bài báo)"*), khớp chính xác 100% mọi số liệu của bài báo gốc.
+   * Theo hệ tọa độ của bài báo (gốc trên-trái, y tăng về phía Nam), hướng âm của NF là Tây (W) và Bắc (N). Dưới quy ước này, với `transpose2` NF là tất định nên mọi áp lực kênh là số nguyên, không thể đạt giá trị $2,41$ như bài báo.
+   * Mọi mốc của bài báo chỉ tái hiện được khi coi Tây (W) và Nam (S) là hướng âm, nên nhiều khả năng bài báo đã dùng quy ước này. Dự án bổ sung biến thể chẩn đoán **`NF_WS`** (ghi nhãn *"NF (bài báo)"*); kết hợp với cách chia `hop`, nó khớp mọi mốc của bài báo trong sai số làm tròn ±0,005 (OE 4,8125 so với 4,81; NF/transpose2 2,40625 so với 2,41).
 
 3. **Nguyên tắc "Một hàm định tuyến duy nhất" (`routeSet`):**
    * [noc/routing.cc](noc/routing.cc) cung cấp hàm duy nhất `routeSet()`. Cả bộ tính áp lực $\phi$, bộ kiểm tra chu trình đồ thị phụ thuộc kênh CDG (phát hiện deadlock) và Router mô phỏng trong ns-3 đều gọi chung hàm này, triệt tiêu nguy cơ sai lệch giữa lý thuyết và mô phỏng.
@@ -138,7 +138,7 @@ Báo cáo đồ án (6 chương, 15 hình, 17 bảng, 3 giải thuật) ở dạ
 
 ## 📚 Tài liệu tham khảo
 
-1. L.-S. Tang, H.-Y. Lin, and M. Palesi, *"Routing Pressure: A Channel-Related and Traffic-Aware Metric of Routing Algorithm,"* **IEEE Transactions on Parallel and Distributed Systems (TPDS)**, vol. 26, no. 3, pp. 884–897, Mar. 2015.
-2. C. J. Glass and L. M. Ni, *"The Turn Model for Adaptive Routing,"* **Journal of the ACM**, vol. 41, no. 5, pp. 874–902, 1994.
+1. M. Tang, X. Lin, and M. Palesi, *"Routing Pressure: A Channel-Related and Traffic-Aware Metric of Routing Algorithm,"* **IEEE Transactions on Parallel and Distributed Systems**, vol. 26, no. 3, pp. 891–901, Mar. 2015.
+2. C. J. Glass and L. M. Ni, *"The Turn Model for Adaptive Routing,"* in *Proc. 19th Annu. Int. Symp. Computer Architecture (ISCA)*, 1992, pp. 278–287.
 3. G.-M. Chiu, *"The Odd-Even Turn Model for Adaptive Routing,"* **IEEE Transactions on Parallel and Distributed Systems**, vol. 11, no. 7, pp. 729–738, 2000.
-4. L. Kleinrock, *Queueing Systems, Volume 2: Computer Applications*, Wiley-Interscience, 1976.
+4. L. Kleinrock, *Queueing Systems, Vol. I: Theory*, Wiley, 1975.
