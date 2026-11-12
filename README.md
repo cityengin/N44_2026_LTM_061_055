@@ -6,7 +6,7 @@
 
 > **Đồ án môn Lập trình mạng**  
 > Tái hiện, kiểm chứng và phân tích nghiên cứu:  
-> **Tang, Lin, Palesi (IEEE TPDS 2015)**: *"Routing Pressure: A Channel-Related and Traffic-Aware Metric of Routing Algorithm"* ([docs/tang2015.pdf](docs/tang2015.pdf)).
+> **Tang, Lin, Palesi (IEEE TPDS 2015)**: *"Routing Pressure: A Channel-Related and Traffic-Aware Metric of Routing Algorithm"*.
 
 ---
 
@@ -28,7 +28,7 @@ Dự án đồng thời làm rõ bản chất lý thuyết, giải mã các đi�
 1. **Phân định hai phương pháp tính $\phi$ (`path` vs `hop`):**
    * **`path` ($k/p$):** Chia đều xác suất theo số đường đi tối thiểu giữa cặp nguồn–đích ($k$ đường qua kênh / $p$ tổng số đường).
    * **`hop` (tại mỗi chặng):** Chia đều xác suất rẽ nhánh tại từng router trung gian (tương ứng với router chọn ngẫu nhiên đều 1 cổng hợp lệ).
-   * *Thực nghiệm:* Đối chiếu 5 040 mẫu kênh (`link_validate.py`) chứng minh độ sử dụng kênh đo được trong ns-3 khớp hoàn hảo với phương pháp `hop` ($R^2 = 0,99986$, slope $\approx 0,999$, RMSE $\approx 0,0029$). Báo cáo cũ tính theo `path` nên bị lệch với mô phỏng và bài báo.
+   * *Thực nghiệm:* Đối chiếu độ sử dụng đo được trên từng kênh chứng minh độ sử dụng kênh đo được trong ns-3 khớp hoàn hảo với phương pháp `hop` ($R^2 = 0,99986$, slope $\approx 0,999$, RMSE $\approx 0,0029$). Báo cáo cũ tính theo `path` nên bị lệch với mô phỏng và bài báo.
 
 2. **Giải mã nghịch lý quy ước Negative-First (NF vs `NF_WS`):**
    * Quy ước Turn Model chuẩn (Glass & Ni 1994, Chiu 2000): hướng âm là Tây (W) và Bắc (N). Dưới quy ước này với `transpose2`, NF là tất định nên áp lực kênh luôn là số nguyên (không thể đạt giá trị $2,41$ như bài báo).
@@ -41,7 +41,7 @@ Dự án đồng thời làm rõ bản chất lý thuyết, giải mã các đi�
    * Mở rộng mô hình Kleinrock M/D/1 bằng cách loại trừ hiện tượng tự xung đột (*self-contention*) dựa trên thông lượng rẽ nhánh (turn flows), dự đoán chính xác thứ tự điểm gãy độ trễ (latency knee) của toàn bộ 15 cấu hình mô phỏng.
 
 5. **Quy chuẩn tái lập 100% từng byte (Byte-level Reproducibility):**
-   * Sử dụng build profile `release` (-O3, không `-march=native`), gán seed/stream RNG logic cố định, áp dụng kỹ thuật Common Random Numbers (CRN) so sánh hiệu theo cặp. Script [scripts/reproduce.sh](scripts/reproduce.sh) cho phép tái lập toàn bộ dữ liệu từ đầu và so sánh khớp từng byte với kết quả đã công bố.
+   * Sử dụng build profile `release` (-O3, không `-march=native`), gán seed/stream RNG logic cố định, áp dụng kỹ thuật Common Random Numbers (CRN) so sánh hiệu theo cặp. Toàn bộ dữ liệu trong `results/` được tái lập từ đầu và khớp từng byte (quy trình mô tả ở mục 3.5 của báo cáo).
 
 ---
 
@@ -51,7 +51,6 @@ Dự án đồng thời làm rõ bản chất lý thuyết, giải mã các đi�
 noc-routing-pressure/
 ├── README.md                    # Tài liệu giới thiệu dự án
 ├── banner.svg                   # Banner đồ họa dự án
-├── docs/                        # Tài liệu tham khảo gốc (Tang 2015 và các báo cáo cũ)
 ├── noc/                         # Mã nguồn C++ mô phỏng NoC trên ns-3 (symlink vào scratch/noc)
 │   ├── topology.{h,cc}          # Lưới 2D Mesh (ánh xạ ID, tọa độ, kênh có hướng)
 │   ├── routing.{h,cc}           # Hàm routeSet() minimal cho XY, YX, NF, NF_WS, OE, FULL
@@ -65,16 +64,6 @@ noc-routing-pressure/
 │   ├── noc-sim.{h,cc}           # Điều phối mô phỏng ns-3, phát Bernoulli, đo thống kê
 │   ├── selftest.{h,cc}          # Suite kiểm thử tự động toàn diện (>50 test cases)
 │   └── noc.cc                   # Điểm vào main() hỗ trợ các cờ chế độ
-├── scripts/                     # Bộ công cụ tự động hóa & phân tích số liệu (Python)
-│   ├── nocrun.py                # Wrapper thực thi binary ns-3, parse dòng RESULT/SIMCHAN
-│   ├── link_validate.py         # Kiểm chứng tương quan U_đo với U_hop vs U_path
-│   ├── sweep.py                 # Quét lưới tham số đa luồng (PIR ratio & PIR abs)
-│   ├── analyze_sweep.py         # Tính điểm bão hòa, phân tích hiệu cặp CRN, vẽ đồ thị
-│   ├── mdl_predict.py           # Mô hình hàng đợi M/D/1 Kleinrock & Kleinrock SC
-│   ├── heatmap.py               # Biểu đồ nhiệt tải kênh lý thuyết vs thực tế
-│   ├── diagrams.py              # Sinh các sơ đồ kiến trúc, turn model, vòng đời gói
-│   ├── measure_resources.sh     # Đo thời gian chạy và bộ nhớ đỉnh của các tác vụ chính
-│   └── reproduce.sh             # Tái lập toàn bộ thí nghiệm từ đầu, so sánh từng byte
 ├── results/                     # Toàn bộ dữ liệu thực nghiệm đã kiểm chứng (CSV, TXT)
 │   ├── phi_all.txt, selftest.txt, simcheck.txt
 │   ├── link_validate_{summary, channels, z}.csv
@@ -91,7 +80,6 @@ noc-routing-pressure/
 * Hệ điều hành Linux (khuyến nghị Ubuntu 22.04 / 24.04).
 * C++23 (GCC ≥ 13 hoặc Clang ≥ 17).
 * **ns-3 phiên bản 3.48** được cài đặt tại `~/ns-3-dev`.
-* Python ≥ 3.10 với môi trường ảo tại `~/noc-routing-pressure/.venv`.
 
 ### 1. Thiết lập symlink vào ns-3
 Thư mục `noc/` được liên kết vào thư mục `scratch/noc` của ns-3:
@@ -106,14 +94,6 @@ ln -s ~/noc-routing-pressure/noc ~/ns-3-dev/scratch/noc
 cd ~/ns-3-dev
 ./ns3 configure --build-profile=release --enable-examples
 ./ns3 build noc
-```
-
-### 3. Cài đặt môi trường Python
-```bash
-cd ~/noc-routing-pressure
-python3 -m venv .venv
-source .venv/bin/activate
-pip install numpy pandas matplotlib
 ```
 
 ---
@@ -146,23 +126,6 @@ Tính bảng $\phi$, kênh cổ chai và ngưỡng $PIR_{max}$:
 ### Kiểm tra tính nhất quán ở tải thấp (`simcheck`)
 ```bash
 ./ns3 run --no-build "noc --mode=simcheck"
-```
-
----
-
-## 🔄 Tái lập toàn bộ kết quả thực nghiệm
-
-Chỉ với một lệnh duy nhất, hệ thống sẽ:
-1. Kiểm tra build profile release và biên dịch `noc`.
-2. Chạy `selftest`, `simcheck`, xuất bảng `phi`.
-3. Chạy kiểm chứng tải kênh `link_validate.py`.
-4. Chạy quét lưới tham số `sweep.py` và phân tích `analyze_sweep.py`.
-5. Tính mô hình hàng đợi `mdl_predict.py`, vẽ biểu đồ nhiệt `heatmap.py` và sơ đồ `diagrams.py`.
-6. So sánh từng byte các file trong `results/` với dữ liệu đã commit (hình được vẽ lại vào thư mục tạm):
-
-```bash
-cd ~/noc-routing-pressure
-./scripts/reproduce.sh
 ```
 
 ---
