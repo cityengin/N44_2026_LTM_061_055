@@ -1167,7 +1167,7 @@ $\text{rate}(i \to c)$ lấy từ dòng `PHITURN` của bộ tính routing press
 này là một heuristic, không được suy ra chặt chẽ. Bảng 4.6 so sánh hai mô hình, và Hình 4.9 vẽ độ trễ của mô phỏng cùng hai
 mô hình.
 
-<!-- nguồn: results/mdl_predict.csv, results/saturation.csv, report/RESULTS.md, d02a3c6 -->
+<!-- nguồn: results/mdl_predict.csv, results/saturation.csv, report/RESULTS.md, 42187f5 -->
 
 Table: Bảng 4.6: So sánh hai mô hình hàng đợi với mô phỏng (pred/sim là tỉ số thời gian chờ dự đoán trên đo được)
 
@@ -1197,7 +1197,7 @@ phần mô hình được khóa sau lần hiệu chỉnh này: không hiệu ch�
 Báo cáo trước về cùng đề tài [9] công bố routing pressure và độ trễ mô phỏng của XY, NF và OE với hai mẫu transpose ở
 PIR 0,010 và 0,014. Bảng 4.7 đặt các số này cạnh kết quả của đề tài.
 
-<!-- nguồn: results/sweep.csv, results/phi_all.txt, report/RESULTS.md, d02a3c6 -->
+<!-- nguồn: results/sweep.csv, results/phi_all.txt, report/RESULTS.md, 42187f5 -->
 
 Table: Bảng 4.7: Routing pressure và độ trễ trung bình (chu kỳ) của đề tài so với báo cáo trước [9]
 
@@ -1240,7 +1240,7 @@ GNU `time`, lấy trung vị của thời gian thực và giá trị lớn nhấ
 của lần quét tải và của toàn bộ quy trình tái lập lấy từ thời gian từng bước mà `scripts/reproduce.sh` in ra. Các số này
 phụ thuộc máy nên không nằm trong phần so sánh từng byte của mục 3.5. Bảng 4.8 cho cấu hình máy và Bảng 4.9 cho kết quả.
 
-<!-- nguồn: scripts/measure_resources.sh, a577dc2 -->
+<!-- nguồn: scripts/measure_resources.sh, b244a40 -->
 
 Table: Bảng 4.8: Cấu hình máy chạy thí nghiệm
 
@@ -1252,7 +1252,7 @@ Table: Bảng 4.8: Cấu hình máy chạy thí nghiệm
 | Trình biên dịch | [ĐIỀN: phiên bản g++] |
 | ns-3 | ns-3.48, profile release (`-O3`, không `-march=native`) |
 
-<!-- nguồn: scripts/measure_resources.sh, scripts/reproduce.sh, a577dc2 -->
+<!-- nguồn: scripts/measure_resources.sh, scripts/reproduce.sh, b244a40 -->
 
 Table: Bảng 4.9: Thời gian chạy và bộ nhớ đỉnh của các tác vụ chính
 
