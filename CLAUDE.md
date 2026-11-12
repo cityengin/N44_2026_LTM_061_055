@@ -199,6 +199,8 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
   report/figures/mdl_predict.png. analyze_sweep.py import hàm knee_for của nó để thêm cột knee_pred,
   knee_pred_sc, nên thứ tự chạy là analyze_sweep.py rồi mdl_predict.py. Cần `noc --mode=phi --turns=1`
   (dòng PHITURN: lưu lượng hop từ cổng vào sang kênh ra, uniform đã chia N−1).
+- `measure_resources.sh`: đo thời gian và bộ nhớ đỉnh (GNU time) của phi, selftest, simcheck và hai lần sim, kèm
+  cấu hình máy → results/resources.txt. KHÔNG thuộc reproduce.sh (phụ thuộc máy). Số liệu cho Bảng 4.8, 4.9.
 - `make_results_md.py`: sinh report/RESULTS.md (kiểm kê bảng và hình, số đọc từ file, không gõ tay).
 - `reproduce.sh`: chạy lại toàn bộ (build → selftest → simcheck → phi → link_validate → sweep →
   analyze_sweep → mdl_predict → heatmap → diagrams → RESULTS.md; thêm example_3x3) vào thư mục tạm, in thời gian từng bước, rồi so
@@ -213,11 +215,16 @@ Nếu không khớp: KHÔNG chỉnh code để ép ra số. Báo cáo biến th�
 
 ## Báo cáo (bước 8: report/bao-cao.md → report/bao-cao.docx)
 - `scripts/build_report.sh [--final]`: chạy check_report.py, có lỗi thì dừng; rồi pandoc (--number-sections,
-  --reference-doc=report/template.docx nếu có) ra report/bao-cao.docx (được theo dõi trong git).
-  Máy không có pandoc-crossref: số Hình/Bảng/Đoạn mã "c.k" gõ tay trong nguồn, script kiểm.
+  --reference-doc=report/template.docx nếu có) ra report/bao-cao.docx (được theo dõi trong git), rồi
+  `scripts/fix_docx.py` đổi style các mục danh sách từ Compact (dùng cho ô bảng) sang ListCompact (TNR 13, giãn 1,5).
+  PY và PANDOC ghi đè được bằng biến môi trường (trên Windows: `PYTHONUTF8=1 PY=python PANDOC=…/pandoc.exe`).
+  Máy không có pandoc-crossref: số Hình/Bảng/Giải thuật "c.k" gõ tay trong nguồn, script kiểm.
+- **Đề không cho đưa code vào báo cáo**: không có khối mã (``` / ~~~); check_report báo lỗi. Thay bằng bảng hoặc mã
+  giả: caption `::: {custom-style="Table Caption"}` "Giải thuật c.k: …" rồi ngay sau là danh sách đánh số "1. …".
+  Tên hàm, lệnh trong dấu `…` vẫn được. Báo cáo không quá 100 trang A4 (check_report cảnh báo khi ước lượng vượt).
 - `scripts/check_report.py [--audit] [--final]`: kiểm đánh số theo chương, mọi nhãn được nhắc trong văn
-  bản, comment `<!-- nguồn: f1, f2, <commit> -->` ngay trước mỗi hình/bảng/đoạn mã (file ở commit đó phải
-  giống bản hiện tại), dòng đoạn mã có trong file nguồn, trích dẫn [n] có trong danh mục.
+  bản, comment `<!-- nguồn: f1, f2, <commit> -->` ngay trước mỗi hình/bảng/giải thuật (file ở commit đó phải
+  giống bản hiện tại), không có khối mã, trích dẫn [n] có trong danh mục.
   Kiểm số thập phân: trong BẢNG phải khớp RESULTS.md hoặc file trong comment nguồn của bảng; trong VĂN BẢN
   khớp RESULTS.md, các file tổng hợp nhỏ, file trong comment nguồn ngay trước đoạn, HOẶC xuất hiện nguyên văn
   trong `<!-- suy-ra: … -->` ngay trước đoạn. --audit in từng số và file khớp với nó.
