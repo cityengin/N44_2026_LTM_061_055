@@ -9,7 +9,8 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PY="$REPO/.venv/bin/python"
+PY="${PY:-$REPO/.venv/bin/python}"   # ghi đè được, vd PY=python trên Windows
+PANDOC="${PANDOC:-pandoc}"
 SRC="$REPO/report/bao-cao.md"
 OUT="$REPO/report/bao-cao.docx"
 TEMPLATE="$REPO/report/template.docx"
@@ -28,7 +29,7 @@ else
     echo "# không có $TEMPLATE: dùng style mặc định của pandoc"
 fi
 # Bỏ cảnh báo của pandoc 3.1.3 về file dịch vi.yaml có sẵn bị lỗi (không ảnh hưởng nội dung; caption tự gõ số).
-pandoc "$TMP/bao-cao.md" "${args[@]}" 2> >(grep -v -E 'translation|vi\.yaml|Aeson|Invalid Term' >&2)
+"$PANDOC" "$TMP/bao-cao.md" "${args[@]}" 2> >(grep -v -E 'translation|vi\.yaml|Aeson|Invalid Term' >&2)
 echo "# đã ghi $OUT ($(du -h "$OUT" | cut -f1))"
 
 echo "# Nhắc việc trước khi nộp:"
