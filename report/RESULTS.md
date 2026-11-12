@@ -6,20 +6,20 @@ File này được sinh bởi `scripts/make_results_md.py`; KHÔNG sửa tay. M�
 
 | # | Mục | File nguồn | Commit |
 |---|---|---|---|
-| 1 | Bảng φ theo hai phương pháp (path k/p, hop) | `results/phi_all.txt` | c7f4ea5 |
-| 2 | Mốc so với bài báo (MATCH/MISMATCH) | `results/selftest.txt` | c7f4ea5 |
-| 3 | Kiểm chứng ρ trên từng kênh (link_validate) | `results/link_validate_summary.csv`, `results/link_validate_z.csv`, `results/link_validate_channels.csv`, `report/figures/link_validate.png` | aede5ad |
-| 4 | Heatmap độ sử dụng kênh | `report/figures/heatmap_pred.png`, `report/figures/heatmap_meas.png`, `results/link_validate_channels.csv` | 2a1afa5 |
-| 5 | Điểm bão hòa (3 định nghĩa, n_near_max) | `results/saturation.csv`, `report/figures/sweep_latency_rel.png`, `report/figures/sweep_throughput_rel.png`, `report/figures/saturation_vs_nearmax.png` | 73a6e1c |
-| 6 | u_max theo pir_ratio | `results/sweep.csv`, `report/figures/sweep_umax_rel.png` | c7f4ea5 |
-| 7 | Hiệu theo cặp giữa các thuật toán (CRN) | `results/paired_diffs.csv`, `report/figures/sweep_latency_abs.png` | 42a2883 |
-| 8 | So sánh với hai báo cáo cũ | `results/sweep.csv`, `results/phi_all.txt`, `report/figures/old_reports_nf.png` | c7f4ea5 |
-| 9 | Hai model hàng đợi | `results/mdl_predict.csv`, `results/saturation.csv`, `results/phi_all.txt`, `report/figures/mdl_predict.png` | c7f4ea5 |
-| 10 | Số liệu kiểm thử | `results/selftest.txt`, `results/simcheck.txt` | c7f4ea5 |
+| 1 | Bảng φ theo hai phương pháp (path k/p, hop) | `results/phi_all.txt` | 5cf62f7 |
+| 2 | Mốc so với bài báo (MATCH/MISMATCH) | `results/selftest.txt` | 5cf62f7 |
+| 3 | Kiểm chứng ρ trên từng kênh (link_validate) | `results/link_validate_summary.csv`, `results/link_validate_z.csv`, `results/link_validate_channels.csv`, `report/figures/link_validate.png` | bd92706 |
+| 4 | Heatmap độ sử dụng kênh | `report/figures/heatmap_pred.png`, `report/figures/heatmap_meas.png`, `results/link_validate_channels.csv` | c598c6d |
+| 5 | Điểm bão hòa (3 định nghĩa, n_near_max) | `results/saturation.csv`, `report/figures/sweep_latency_rel.png`, `report/figures/sweep_throughput_rel.png`, `report/figures/saturation_vs_nearmax.png` | d165743 |
+| 6 | u_max theo pir_ratio | `results/sweep.csv`, `report/figures/sweep_umax_rel.png` | 5cf62f7 |
+| 7 | Hiệu theo cặp giữa các thuật toán (CRN) | `results/paired_diffs.csv`, `report/figures/sweep_latency_abs.png` | 4131c6c |
+| 8 | So sánh với hai báo cáo cũ | `results/sweep.csv`, `results/phi_all.txt`, `report/figures/old_reports_nf.png` | 5cf62f7 |
+| 9 | Hai model hàng đợi | `results/mdl_predict.csv`, `results/saturation.csv`, `results/phi_all.txt`, `report/figures/mdl_predict.png` | 5cf62f7 |
+| 10 | Số liệu kiểm thử | `results/selftest.txt`, `results/simcheck.txt` | 5cf62f7 |
 
 ## 1. Bảng φ theo hai phương pháp (path k/p, hop)
 
-- File nguồn (commit gần nhất): `results/phi_all.txt` (`c7f4ea5`)
+- File nguồn (commit gần nhất): `results/phi_all.txt` (`5cf62f7`)
 - Lệnh tạo ra: `~/ns-3-dev/build/scratch/noc/ns3.48-noc --mode=phi --channels=1 --turns=1 > results/phi_all.txt`
 
 Lưới 7×7. Với uniform, φ chưa chuẩn hóa; PIR_max tính từ φ chuẩn hóa (chia N−1 = 48). NF_WS là biến thể chẩn đoán, khi so với bài báo ghi là "NF (bài báo)". FULL chỉ dùng để kiểm thử.
@@ -47,7 +47,7 @@ Lưới 7×7. Với uniform, φ chưa chuẩn hóa; PIR_max tính từ φ chuẩ
 
 ## 2. Mốc so với bài báo (MATCH/MISMATCH)
 
-- File nguồn (commit gần nhất): `results/selftest.txt` (`c7f4ea5`)
+- File nguồn (commit gần nhất): `results/selftest.txt` (`5cf62f7`)
 - Lệnh tạo ra: `~/ns-3-dev/build/scratch/noc/ns3.48-noc --mode=selftest > results/selftest.txt`
 
 Số đường 0→48 trên 7×7 (test HARD):
@@ -83,7 +83,7 @@ Số đường 0→48 trên 7×7 (test HARD):
 
 ## 3. Kiểm chứng ρ trên từng kênh (link_validate)
 
-- File nguồn (commit gần nhất): `results/link_validate_summary.csv` (`aede5ad`), `results/link_validate_z.csv` (`aede5ad`), `results/link_validate_channels.csv` (`c7f4ea5`), `report/figures/link_validate.png` (`aede5ad`)
+- File nguồn (commit gần nhất): `results/link_validate_summary.csv` (`bd92706`), `results/link_validate_z.csv` (`bd92706`), `results/link_validate_channels.csv` (`5cf62f7`), `report/figures/link_validate.png` (`bd92706`)
 - Lệnh tạo ra: `cd scripts && ../.venv/bin/python link_validate.py`
 
 U_đo (mô phỏng, trung bình RngRun 1..5, measure 100000) so với U_hop = ρ_hop·PIR·16 và U_path = ρ_path·PIR·16, tại pir_ratio 0.5 và 0.9; 15 cấu hình.
@@ -110,7 +110,7 @@ Hình: `report/figures/link_validate.png`.
 
 ## 4. Heatmap độ sử dụng kênh
 
-- File nguồn (commit gần nhất): `report/figures/heatmap_pred.png` (`2a1afa5`), `report/figures/heatmap_meas.png` (`2a1afa5`), `results/link_validate_channels.csv` (`c7f4ea5`)
+- File nguồn (commit gần nhất): `report/figures/heatmap_pred.png` (`c598c6d`), `report/figures/heatmap_meas.png` (`c598c6d`), `results/link_validate_channels.csv` (`5cf62f7`)
 - Lệnh tạo ra: `cd scripts && ../.venv/bin/python heatmap.py`
 
 Tại pir_ratio 0.9, thang màu chung 0..1, viền đen là các kênh đạt φ theo dự đoán.
@@ -128,7 +128,7 @@ Hình: `report/figures/heatmap_pred.png`, `report/figures/heatmap_meas.png`.
 
 ## 5. Điểm bão hòa (3 định nghĩa, n_near_max)
 
-- File nguồn (commit gần nhất): `results/saturation.csv` (`73a6e1c`), `report/figures/sweep_latency_rel.png` (`42a2883`), `report/figures/sweep_throughput_rel.png` (`42a2883`), `report/figures/saturation_vs_nearmax.png` (`2a1afa5`)
+- File nguồn (commit gần nhất): `results/saturation.csv` (`d165743`), `report/figures/sweep_latency_rel.png` (`4131c6c`), `report/figures/sweep_throughput_rel.png` (`4131c6c`), `report/figures/saturation_vs_nearmax.png` (`c598c6d`)
 - Lệnh tạo ra: `cd scripts && ../.venv/bin/python analyze_sweep.py`
 
 Điểm bão hòa theo pir_ratio (1.0 = PIR_max_hop), nội suy trên lưới tương đối 0.1..1.3: (i) sat_ratio_thr: throughput/offered < 0.95; (ii) sat_ratio_lat: lat_avg ≥ 2·16·hops_avg; (iii) sat_ratio_umax: u_max ≥ 0.98. n_near_max = số kênh có ρ_hop ≥ 0.95·φ. knee_pred, knee_pred_sc: điểm gãy (ii) theo model kleinrock, kleinrock_sc (mục 9). "—" = không vượt trong lưới.
@@ -155,7 +155,7 @@ Hình: `report/figures/sweep_latency_rel.png`, `report/figures/sweep_throughput_
 
 ## 6. u_max theo pir_ratio
 
-- File nguồn (commit gần nhất): `results/sweep.csv` (`c7f4ea5`), `report/figures/sweep_umax_rel.png` (`42a2883`)
+- File nguồn (commit gần nhất): `results/sweep.csv` (`5cf62f7`), `report/figures/sweep_umax_rel.png` (`4131c6c`)
 - Lệnh tạo ra: `cd scripts && ../.venv/bin/python sweep.py ; cd scripts && ../.venv/bin/python analyze_sweep.py`
 
 Trung bình u_max (kênh bận nhất trong cửa sổ đo) qua RngRun 1..5. Kỳ vọng bám y = x tới 1 rồi đi ngang; các cấu hình nhiều kênh gần max nhỉnh hơn y = x vì max của nhiều ước lượng có nhiễu bị đẩy lên.
@@ -182,7 +182,7 @@ Hình: `report/figures/sweep_umax_rel.png`.
 
 ## 7. Hiệu theo cặp giữa các thuật toán (CRN)
 
-- File nguồn (commit gần nhất): `results/paired_diffs.csv` (`42a2883`), `report/figures/sweep_latency_abs.png` (`42a2883`)
+- File nguồn (commit gần nhất): `results/paired_diffs.csv` (`4131c6c`), `report/figures/sweep_latency_abs.png` (`4131c6c`)
 - Lệnh tạo ra: `cd scripts && ../.venv/bin/python analyze_sweep.py`
 
 lat_avg trên lưới tuyệt đối, A − B ± CI 95% (t với df = 4), * = có ý nghĩa. Ghép cặp theo RngRun nhờ CRN (cùng traffic, PIR, RngRun ⇒ cùng tập gói).
@@ -208,7 +208,7 @@ Hình: `report/figures/sweep_latency_abs.png`. Đầy đủ 10 cặp × 3 traffi
 
 ## 8. So sánh với hai báo cáo cũ
 
-- File nguồn (commit gần nhất): `results/sweep.csv` (`c7f4ea5`), `results/phi_all.txt` (`c7f4ea5`), `report/figures/old_reports_nf.png` (`42a2883`)
+- File nguồn (commit gần nhất): `results/sweep.csv` (`5cf62f7`), `results/phi_all.txt` (`5cf62f7`), `report/figures/old_reports_nf.png` (`4131c6c`)
 - Lệnh tạo ra: `cd scripts && ../.venv/bin/python analyze_sweep.py`
 
 Số liệu báo cáo cũ lấy từ docs/ (mục 4.2–4.3, chỉ có hai đầu PIR), lưu trong `analyze_sweep.OLD_REPORT`. φ của họ (t1 = 6, t2 = 2.60) khớp NF (bài báo) + path; mô phỏng của họ (NF tốt ở t1, tệ ở t2) khớp NF (quy ước chính).
@@ -228,7 +228,7 @@ Hình: `report/figures/old_reports_nf.png`.
 
 ## 9. Hai model hàng đợi
 
-- File nguồn (commit gần nhất): `results/mdl_predict.csv` (`c7f4ea5`), `results/saturation.csv` (`73a6e1c`), `results/phi_all.txt` (`c7f4ea5`), `report/figures/mdl_predict.png` (`73a6e1c`)
+- File nguồn (commit gần nhất): `results/mdl_predict.csv` (`5cf62f7`), `results/saturation.csv` (`d165743`), `results/phi_all.txt` (`5cf62f7`), `report/figures/mdl_predict.png` (`d165743`)
 - Lệnh tạo ra: `cd scripts && ../.venv/bin/python mdl_predict.py`
 
 kleinrock: Kleinrock independence + M/D/1. kleinrock_sc: bỏ self-contention (heuristic, W·(1 − Σ p_i²)). Phần chờ = lat − 16·hops. queue_delay ở PIR 0.001 đo được trong simcheck: 0.48–0.68 chu kỳ. Mô phỏng: OE/uniform gãy ở 0.950, nhóm tất định trên transpose ở 0.994–1.003. Phần mô hình đã khóa sau bước 6c.
@@ -248,7 +248,7 @@ Hình: `report/figures/mdl_predict.png`. Theo cấu hình: `results/mdl_predict.
 
 ## 10. Số liệu kiểm thử
 
-- File nguồn (commit gần nhất): `results/selftest.txt` (`c7f4ea5`), `results/simcheck.txt` (`c7f4ea5`)
+- File nguồn (commit gần nhất): `results/selftest.txt` (`5cf62f7`), `results/simcheck.txt` (`5cf62f7`)
 - Lệnh tạo ra: `~/ns-3-dev/build/scratch/noc/ns3.48-noc --mode=selftest > results/selftest.txt ; ~/ns-3-dev/build/scratch/noc/ns3.48-noc --mode=simcheck > results/simcheck.txt`
 
 selftest: 181 PASS / 0 FAIL (HARD, hard_failures=0); SOFT so với bài báo: 11 MATCH / 7 MISMATCH (soft_match=11, soft_mismatch=7).
