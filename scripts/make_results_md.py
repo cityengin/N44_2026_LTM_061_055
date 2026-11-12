@@ -277,9 +277,9 @@ def tests_section(rep: Report) -> None:
 
 
 def limitations(repo: Path) -> str:
-    text = (repo / "docs" / "dien-giai.md").read_text().splitlines()
+    text = (repo / "docs" / "dien-giai.md").read_text(encoding="utf-8").splitlines()
     start = text.index("## Diễn giải kết quả")
-    end = next(i for i in range(start + 1, len(text)) if text[i].startswith("## "))
+    end = next((i for i in range(start + 1, len(text)) if text[i].startswith("## ")), len(text))
     return "\n".join(text[start + 1:end]).strip()
 
 
