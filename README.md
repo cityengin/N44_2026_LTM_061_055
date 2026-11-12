@@ -49,7 +49,6 @@ Dự án đồng thời làm rõ bản chất lý thuyết, giải mã các đi�
 
 ```
 noc-routing-pressure/
-├── CLAUDE.md                    # Quy ước kỹ thuật, đặc tả mốc kiểm thử và quy trình Git
 ├── README.md                    # Tài liệu giới thiệu dự án
 ├── banner.svg                   # Banner đồ họa dự án
 ├── docs/                        # Tài liệu tham khảo gốc (Tang 2015 và các báo cáo cũ)

@@ -9,3 +9,6 @@ results/*.csv
 !results/mdl_predict.csv
 !results/sweep.csv
 results/*.log
+
+# Ghi chú làm việc cục bộ, không đưa lên GitHub
+CLAUDE.md
