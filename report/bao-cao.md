@@ -255,7 +255,7 @@ $$|C| = 2\,\bigl[\,W(H-1) + H(W-1)\,\bigr],$$
 nên lưới 7×7 dùng trong đề tài có 168 kênh. Đề tài chỉ xét định tuyến tối thiểu (minimal routing): mọi gói đi theo
 một đường ngắn nhất, nên số hop từ nguồn tới đích bằng khoảng cách Manhattan $|\Delta x| + |\Delta y|$.
 
-<!-- nguồn: report/figures/diag_mesh.png, scripts/diagrams.py, 5a3b6ee -->
+<!-- nguồn: report/figures/diag_mesh.png, scripts/diagrams.py, 033a3b2 -->
 
 ![Hình 2.1: Quy ước tọa độ, số hiệu nút và tên kênh trên lưới 4×4 (gốc trên-trái, y tăng về phía Nam)](figures/diag_mesh.png){width=75%}
 
@@ -317,7 +317,7 @@ rẽ còn lại vẫn ghép được thành chu trình phức tạp hơn [3].
 Cách tiếp cận cấm rẽ này gọi là turn model (mô hình rẽ). Hình 2.2 cho thấy các hướng rẽ bị cấm của từng thuật toán
 dùng trong đề tài.
 
-<!-- nguồn: report/figures/diag_turns.png, scripts/diagrams.py, noc/routing.cc, 5a3b6ee -->
+<!-- nguồn: report/figures/diag_turns.png, scripts/diagrams.py, noc/routing.cc, 033a3b2 -->
 
 ![Hình 2.2: Tám hướng rẽ trên lưới 2D và các hướng rẽ bị cấm của XY, YX, NF theo hai quy ước, OE ở cột chẵn và cột lẻ](figures/diag_turns.png){width=95%}
 
@@ -347,7 +347,7 @@ là cận trên, và CDG của nó phải có chu trình.
 Bảng 2.1 tóm tắt các thuật toán. Bộ tự kiểm thử của đề tài xác nhận CDG của XY, YX, cả hai quy ước NF và OE đều không
 có chu trình, còn CDG của FULL có chu trình.
 
-<!-- nguồn: results/selftest.txt, noc/routing.cc, c7f4ea5 -->
+<!-- nguồn: results/selftest.txt, noc/routing.cc, 5cf62f7 -->
 
 Table: Bảng 2.1: Các thuật toán định tuyến trên lưới 7×7: hướng rẽ bị cấm, tổng số đường trên 2 352 cặp nguồn–đích và CDG
 
@@ -437,14 +437,14 @@ $\sigma^{\mathrm{path}}(\text{1-2}) = 1/6$. Theo cách chia theo nhánh, gói ph
 nên $\sigma^{\mathrm{path}}(\text{1-4}) = 2/6 = 1/3$, trong khi $\sigma^{\mathrm{hop}}(\text{1-4}) = \tfrac14$. Cách chia
 theo đường dồn tải vào giữa lưới, nơi có nhiều đường đi qua; cách chia theo nhánh dồn tải ra mép nhiều hơn.
 
-<!-- nguồn: results/example_3x3.txt, 5a6f060 -->
+<!-- nguồn: results/example_3x3.txt, 6c37383 -->
 
 Hình 2.3 áp dụng cả hai cách cho toàn bộ mẫu transpose1 trên lưới 3×3 với NF theo quy ước chính. Trên lưới này cả sáu
 cặp đều thích ứng hoàn toàn. Theo cách chia theo đường, routing pressure là 0,833333 và đạt tại 8 kênh quanh nút trung
 tâm; theo cách chia theo nhánh, routing pressure là 0,75 và đạt tại 16 kênh. Không chỉ giá trị mà cả vị trí kênh cổ
 chai cũng thay đổi theo cách hiểu.
 
-<!-- nguồn: report/figures/diag_path_hop.png, results/example_3x3.txt, 5a6f060 -->
+<!-- nguồn: report/figures/diag_path_hop.png, results/example_3x3.txt, 6c37383 -->
 
 ![Hình 2.3: Channel pressure của từng kênh trên lưới 3×3, NF (quy ước chính), transpose1: (a) chia theo đường, (b) chia theo nhánh](figures/diag_path_hop.png){width=100%}
 
@@ -471,7 +471,7 @@ có chu trình.
 dụng đo được của mỗi kênh bằng $16\,\hat\rho^{\mathrm{hop}}(c)\,\mathrm{PIR}$; (H2) mạng ổn định khi
 $\mathrm{PIR} < \mathrm{PIR}_{\max}$ và bão hòa khi PIR vượt ngưỡng này. Bảng 2.2 liệt kê các thành phần của bài toán.
 
-<!-- nguồn: noc/phi.cc, noc/traffic.cc, noc/noc-sim.cc, c7f4ea5 -->
+<!-- nguồn: noc/phi.cc, noc/traffic.cc, noc/noc-sim.cc, 5cf62f7 -->
 
 Table: Bảng 2.2: Phát biểu bài toán: đầu vào, đầu ra, biến, tham số, giả thiết và ràng buộc
 
@@ -499,7 +499,7 @@ thuật toán, tọa độ nút hiện tại, nút nguồn và nút đích, rồ
 N, S. Việc chọn một cổng trong tập đó (selection) được tách thành một hàm riêng. Hình 3.1 cho thấy hai nhánh của chương
 trình cùng gọi `routeSet`: nhánh phân tích tĩnh (cây tìm kiếm, routing pressure, CDG) và nhánh mô phỏng ns-3 (router).
 
-<!-- nguồn: report/figures/diag_arch.png, scripts/diagrams.py, 5a3b6ee -->
+<!-- nguồn: report/figures/diag_arch.png, scripts/diagrams.py, 033a3b2 -->
 
 ![Hình 3.1: Kiến trúc chương trình: phân tích tĩnh và mô phỏng ns-3 cùng gọi một hàm định tuyến routeSet](figures/diag_arch.png){width=90%}
 
@@ -509,7 +509,7 @@ có nếu $\Delta x = 0$), $e_y$ tương tự theo trục y (S nếu $\Delta y >
 rỗng, nghĩa là gói đã tới đích. Mọi thuật toán trừ OE chỉ cần dấu của $\Delta x$ và $\Delta y$; OE cần thêm cột của nút
 hiện tại, nút nguồn và nút đích.
 
-<!-- nguồn: noc/routing.cc, 950decd -->
+<!-- nguồn: noc/routing.cc, 66f7254 -->
 
 Table: Bảng 3.1: Tập cổng hợp lệ $R(v)$ mà hàm routeSet trả về tại nút hiện tại $v$
 
@@ -531,7 +531,7 @@ traffic, cây tìm kiếm, routing pressure, CDG) là C++ thuần, không phụ 
 ns-3. Các script Python trong `scripts/` chạy chương trình song song, tổng hợp kết quả thành CSV, vẽ hình và kiểm tra
 tính tái lập. Bảng 3.2 liệt kê các module.
 
-<!-- nguồn: noc/noc.cc, scripts/reproduce.sh, 5a6f060 -->
+<!-- nguồn: noc/noc.cc, scripts/reproduce.sh, 6c37383 -->
 
 Table: Bảng 3.2: Các module của chương trình
 
@@ -560,7 +560,7 @@ Bảng 3.3 so sánh hệ thống của đề tài với hai hệ thống đã c�
 để kiểm chứng, và chương trình ns-3 của báo cáo trước [9]. Thông tin về [1] và [9] lấy từ chính các tài liệu đó; ô "không
 nêu" nghĩa là tài liệu không mô tả.
 
-<!-- nguồn: docs/tang2015.pdf, docs/Báo-cáo-NS3-Project-Routing-Pressure 1.pdf, 3448594 -->
+<!-- nguồn: docs/tang2015.pdf, docs/Báo-cáo-NS3-Project-Routing-Pressure 1.pdf, 73dd5de -->
 
 Table: Bảng 3.3: So sánh hệ thống của đề tài với Noxim trong [1] và chương trình của báo cáo trước [9]
 
@@ -593,7 +593,7 @@ $1/|R(v)|$ dọc đường. Nếu tại một nút chưa phải đích mà tập
 thuật toán định tuyến bị cài sai. Với lưới 7×7, cặp xa nhất có 924 đường với FULL, nên việc duyệt hết mọi đường của
 mọi cặp vẫn chạy nhanh. Giải thuật 3.1 mô tả bộ tính channel pressure dựa trên cây tìm kiếm.
 
-<!-- nguồn: noc/searchtree.cc, noc/phi.cc, c7f4ea5 -->
+<!-- nguồn: noc/searchtree.cc, noc/phi.cc, 5cf62f7 -->
 
 ::: {custom-style="Table Caption"}
 Giải thuật 3.1: Tính channel pressure và routing pressure bằng cây tìm kiếm
@@ -631,7 +631,7 @@ trên mỗi đường. Chu trình được tìm bằng DFS ba màu (trắng: ch�
 đỉnh xám nghĩa là có chu trình, và chương trình in chu trình đó làm bằng chứng. FULL được dùng làm đối chứng âm: nếu
 bộ dò chu trình không tìm ra chu trình của FULL thì chính bộ dò bị sai. Giải thuật 3.2 tóm tắt hai bước này.
 
-<!-- nguồn: noc/cdg.cc, c7f4ea5 -->
+<!-- nguồn: noc/cdg.cc, 5cf62f7 -->
 
 ::: {custom-style="Table Caption"}
 Giải thuật 3.2: Dựng đồ thị phụ thuộc kênh và tìm chu trình
@@ -679,7 +679,7 @@ thời điểm có sự kiện, và bộ lập lịch `Simulator` lấy lần l�
 kết thúc truyền một khung, và một gói tới thiết bị ở nút kế tiếp. Hình 3.2 mô tả vòng đời của một gói qua các lời gọi
 hàm và sự kiện đó, cùng với trục thời gian của một lần chạy.
 
-<!-- nguồn: report/figures/diag_ns3.png, scripts/diagrams.py, 5a3b6ee -->
+<!-- nguồn: report/figures/diag_ns3.png, scripts/diagrams.py, 033a3b2 -->
 
 ![Hình 3.2: Mô hình ns-3: (a) vòng đời của một gói, (b) trục thời gian warmup, measure, drain](figures/diag_ns3.png){width=100%}
 
@@ -709,7 +709,7 @@ hướng ngược lại. Router dùng bảng này để chuyển một hướng 
 bằng 16 ns: $32\ \text{byte} \times 8 / 16\ \text{Gbps} = 16\ \text{ns}$. Khung 32 byte gồm header PPP 2 byte do
 `PointToPointNetDevice` thêm vào, header riêng của đề tài `NoCHeader` 10 byte và 20 byte payload (Bảng 3.4).
 
-<!-- nguồn: noc/noc-header.cc, noc/noc-header.h, results/selftest.txt, c7f4ea5 -->
+<!-- nguồn: noc/noc-header.cc, noc/noc-header.h, results/selftest.txt, 5cf62f7 -->
 
 Table: Bảng 3.4: Bố cục khung 32 byte trên dây
 
@@ -739,7 +739,7 @@ này tách `NoCHeader` khỏi gói, tăng số hop và kiểm tra đích. Nếu 
 ứng. Nếu kênh đang bận, gói nằm trong hàng đợi của thiết bị cho tới khi kênh rảnh; vì thiết bị chỉ bắt đầu truyền khi
 đã nhận trọn khung, router hoạt động theo kiểu store-and-forward.
 
-<!-- nguồn: noc/noc-router.cc, 32f4e9a -->
+<!-- nguồn: noc/noc-router.cc, 8ec2b6d -->
 
 ::: {custom-style="Table Caption"}
 Giải thuật 3.3: Gắn thiết bị, nhận và chuyển tiếp gói trong NocRouter
@@ -768,7 +768,7 @@ mỗi chu kỳ, chương trình rút khoảng cách tới lần phát kế tiế
 chứ không tỉ lệ với số chu kỳ. Bài báo [1] dùng khoảng cách theo phân phối mũ. Hai phân phối có cùng kỳ vọng; hệ số biến
 thiên (CV) của phân phối hình học là $\sqrt{1 - \mathrm{PIR}}$, rất gần 1 là CV của phân phối mũ.
 
-<!-- nguồn: results/sweep.csv, c7f4ea5 -->
+<!-- nguồn: results/sweep.csv, 5cf62f7 -->
 <!-- suy-ra: PIR lớn nhất trong sweep.csv là 0,0464282 = 1,3 × 0,035714 (XY uniform); CV = √(1 − 0,0464282) = 0,9765 ≈ 0,977 -->
 
 Với PIR lớn nhất trong các lần quét (0,0464282), CV vẫn bằng khoảng 0,977, nên khác biệt giữa hai phân phối là không
@@ -815,7 +815,7 @@ SOFT so kết quả với các mốc của [1] và chỉ in MATCH hoặc MISMATC
 khi kết quả không khớp với bài báo thì phải báo cáo chứ không được sửa chương trình để ép ra số. Bảng 3.5 tóm tắt bộ
 tự kiểm thử.
 
-<!-- nguồn: results/selftest.txt, c7f4ea5 -->
+<!-- nguồn: results/selftest.txt, 5cf62f7 -->
 
 Table: Bảng 3.5: Bộ tự kiểm thử (`--mode=selftest`)
 
@@ -844,7 +844,7 @@ nên mô phỏng phải khớp các giá trị tính tay. Có bốn kiểm tra c
 Ngoài ra, NF theo quy ước chính với transpose1 phải cho cùng độ trễ và throughput (trong khoảng tin cậy 95%) với NF
 (bài báo) với transpose2, vì hai cấu hình là ảnh gương của nhau. Bảng 3.6 cho kết quả.
 
-<!-- nguồn: results/simcheck.txt, c7f4ea5 -->
+<!-- nguồn: results/simcheck.txt, 5cf62f7 -->
 
 Table: Bảng 3.6: Kết quả simcheck
 
@@ -893,7 +893,7 @@ dự đoán chuẩn cho mô phỏng; PIR~max~ và pir_ratio đều tính từ φ
 Bảng 4.1 so routing pressure tính theo hai cách với các mốc của [1]; sai số chấp nhận là ±0,005, tức sai số làm tròn
 tới hai chữ số thập phân của bài báo.
 
-<!-- nguồn: results/selftest.txt, results/phi_all.txt, c7f4ea5 -->
+<!-- nguồn: results/selftest.txt, results/phi_all.txt, 5cf62f7 -->
 
 Table: Bảng 4.1: Routing pressure theo hai cách chia so với các mốc của [1] (lưới 7×7, riêng XY uniform trên lưới 3×3, chưa chuẩn hóa)
 
@@ -950,7 +950,7 @@ chạy. Nếu dự đoán đúng, $z$ có phân phối Student với 4 bậc t�
 
 ### Kết quả hồi quy
 
-<!-- nguồn: results/link_validate_summary.csv, results/link_validate_z.csv, aede5ad -->
+<!-- nguồn: results/link_validate_summary.csv, results/link_validate_z.csv, bd92706 -->
 
 Table: Bảng 4.2: Độ sử dụng đo được so với hai dự đoán (kênh có lưu lượng, 15 cấu hình)
 
@@ -973,7 +973,7 @@ Trung bình của $z$ theo nhánh hơi âm (−0,262867). Nguyên nhân là CRN:
 nếu các RngRun 1 tới 5 tình cờ tạo ít gói hơn kỳ vọng thì độ sử dụng của mọi kênh, trong mọi cấu hình, cùng lệch xuống.
 Vì vậy các kênh không phải là các mẫu độc lập, và độ lệch chung này không phải sai số của dự đoán.
 
-<!-- nguồn: report/figures/link_validate.png, aede5ad -->
+<!-- nguồn: report/figures/link_validate.png, bd92706 -->
 
 ![Hình 4.1: Độ sử dụng kênh đo được so với dự đoán theo nhánh (trái) và theo đường (phải); đường chéo là y = x](figures/link_validate.png){width=100%}
 
@@ -983,7 +983,7 @@ Hình 4.2 và Hình 4.3 vẽ độ sử dụng dự đoán và đo được củ
 transpose; viền đen đánh dấu các kênh đạt φ theo dự đoán. Hai hình gần như trùng nhau. Bảng 4.3 cho thấy kênh bận nhất
 trong mô phỏng luôn thuộc tập kênh đạt φ, với độ sử dụng từ 0,897 tới 0,909 so với dự đoán 0,9.
 
-<!-- nguồn: results/link_validate_channels.csv, report/figures/heatmap_pred.png, c7f4ea5 -->
+<!-- nguồn: results/link_validate_channels.csv, report/figures/heatmap_pred.png, 5cf62f7 -->
 
 Table: Bảng 4.3: Kênh bận nhất ở pir_ratio 0,9: dự đoán và mô phỏng
 
@@ -996,11 +996,11 @@ Table: Bảng 4.3: Kênh bận nhất ở pir_ratio 0,9: dự đoán và mô ph�
 | NF (bài báo) | transpose1 | 4 | 0,900 | 0,904 | 42-35 | có |
 | NF (bài báo) | transpose2 | 12 | 0,900 | 0,909 | 17-16 | có |
 
-<!-- nguồn: report/figures/heatmap_pred.png, 2a1afa5 -->
+<!-- nguồn: report/figures/heatmap_pred.png, c598c6d -->
 
 ![Hình 4.2: Độ sử dụng dự đoán U~hop~ của từng kênh ở pir_ratio 0,9](figures/heatmap_pred.png){width=60%}
 
-<!-- nguồn: report/figures/heatmap_meas.png, 2a1afa5 -->
+<!-- nguồn: report/figures/heatmap_meas.png, c598c6d -->
 
 ![Hình 4.3: Độ sử dụng đo được U~đo~ của từng kênh ở pir_ratio 0,9 (trung bình 5 RngRun)](figures/heatmap_meas.png){width=60%}
 
@@ -1021,7 +1021,7 @@ rồi đi ngang ở 1, đúng như dự đoán: kênh cổ chai bận đúng b�
 nhiều kênh gần mức tối đa (NF thích ứng, XY và YX với uniform) nằm hơi trên đường $y = x$, vì giá trị lớn nhất của
 nhiều ước lượng có nhiễu bị đẩy lên.
 
-<!-- nguồn: report/figures/sweep_umax_rel.png, 42a2883 -->
+<!-- nguồn: report/figures/sweep_umax_rel.png, 4131c6c -->
 
 ![Hình 4.4: u_max theo pir_ratio; đường đứt là y = x](figures/sweep_umax_rel.png){width=100%}
 
@@ -1034,7 +1034,7 @@ nội suy tuyến tính trên lưới tương đối:
 - (ii) lat_avg ≥ 2·16·hops_avg: độ trễ trung bình gấp đôi độ trễ khi không tải (Hình 4.6);
 - (iii) u_max ≥ 0,98: kênh bận nhất gần như bận liên tục.
 
-<!-- nguồn: results/saturation.csv, 73a6e1c -->
+<!-- nguồn: results/saturation.csv, d165743 -->
 
 Table: Bảng 4.4: Điểm bão hòa theo pir_ratio và điểm gãy dự đoán của hai mô hình hàng đợi (mục 4.4)
 
@@ -1065,11 +1065,11 @@ chai quá tải, chỉ các luồng đi qua nó bị chặn, còn các luồng k
 Như vậy, trong mô hình của đề tài, PIR~max~ = 0,0625/φ~hop~ dự đoán đúng ngưỡng nghẽn của cả 15 cấu hình. Chương 5 bàn
 về mức độ độc lập của kết quả này.
 
-<!-- nguồn: report/figures/sweep_throughput_rel.png, 42a2883 -->
+<!-- nguồn: report/figures/sweep_throughput_rel.png, 4131c6c -->
 
 ![Hình 4.5: Tỉ số throughput/offered theo pir_ratio](figures/sweep_throughput_rel.png){width=100%}
 
-<!-- nguồn: report/figures/sweep_latency_rel.png, 42a2883 -->
+<!-- nguồn: report/figures/sweep_latency_rel.png, 4131c6c -->
 
 ![Hình 4.6: Độ trễ trung bình theo pir_ratio (thang log)](figures/sweep_latency_rel.png){width=100%}
 
@@ -1081,7 +1081,7 @@ NF (bài báo) (cùng φ~hop~ = 6) gãy ngay sau PIR~max~ = 0,010417, OE (φ~hop
 0,012987, còn NF theo quy ước chính gần như không đổi trong cả khoảng quét vì PIR~max~ của nó là 0,025974. Với
 transpose2, vai trò của hai quy ước NF đổi chỗ. Thứ tự này trùng với thứ tự mà [1] suy ra từ routing pressure.
 
-<!-- nguồn: report/figures/sweep_latency_abs.png, 42a2883 -->
+<!-- nguồn: report/figures/sweep_latency_abs.png, 4131c6c -->
 
 ![Hình 4.7: Độ trễ trung bình theo PIR tuyệt đối; đường chấm là PIR~max~ của từng thuật toán](figures/sweep_latency_abs.png){width=100%}
 
@@ -1090,7 +1090,7 @@ transpose2, vai trò của hai quy ước NF đổi chỗ. Thứ tự này trùn
 Nhờ CRN, có thể so hai thuật toán bằng hiệu độ trễ trên cùng RngRun. Bảng 4.5 trích hiệu độ trễ kèm khoảng tin cậy 95%
 (phân phối Student, 4 bậc tự do); dấu * đánh dấu hiệu có ý nghĩa thống kê.
 
-<!-- nguồn: results/paired_diffs.csv, 42a2883 -->
+<!-- nguồn: results/paired_diffs.csv, 4131c6c -->
 
 Table: Bảng 4.5: Hiệu độ trễ trung bình theo cặp (chu kỳ, A − B ± khoảng tin cậy 95%)
 
@@ -1125,7 +1125,7 @@ Tuy nhiên n_near_max bị lẫn với loại mẫu lưu lượng và loại thu
 transpose, nhóm 12 kênh toàn là NF thích ứng, nhóm 56 kênh là uniform. Vì vậy chưa tách được tác động của số kênh khỏi
 tác động của loại lưu lượng. OE với uniform là một điểm lệch: chỉ có 4 kênh gần mức tối đa nhưng gãy ở 0,950.
 
-<!-- nguồn: report/figures/saturation_vs_nearmax.png, 2a1afa5 -->
+<!-- nguồn: report/figures/saturation_vs_nearmax.png, c598c6d -->
 
 ![Hình 4.8: Điểm gãy (ii) của độ trễ theo số kênh gần mức tối đa n_near_max (thang log)](figures/saturation_vs_nearmax.png){width=80%}
 
@@ -1167,7 +1167,7 @@ $\text{rate}(i \to c)$ lấy từ dòng `PHITURN` của bộ tính routing press
 này là một heuristic, không được suy ra chặt chẽ. Bảng 4.6 so sánh hai mô hình, và Hình 4.9 vẽ độ trễ của mô phỏng cùng hai
 mô hình.
 
-<!-- nguồn: results/mdl_predict.csv, results/saturation.csv, report/RESULTS.md, 65e1c6f -->
+<!-- nguồn: results/mdl_predict.csv, results/saturation.csv, report/RESULTS.md, 5074ab1 -->
 
 Table: Bảng 4.6: So sánh hai mô hình hàng đợi với mô phỏng (pred/sim là tỉ số thời gian chờ dự đoán trên đo được)
 
@@ -1188,7 +1188,7 @@ phỏng. Sai số còn lại có dấu ngược với mô hình cũ: ở tải c
 0,83), nên điểm gãy của các cấu hình có nhiều kênh gần mức tối đa bị dự đoán muộn hơn. Theo nguyên tắc đặt ra từ trước,
 phần mô hình được khóa sau lần hiệu chỉnh này: không hiệu chỉnh thêm công thức hay tham số.
 
-<!-- nguồn: report/figures/mdl_predict.png, 73a6e1c -->
+<!-- nguồn: report/figures/mdl_predict.png, d165743 -->
 
 ![Hình 4.9: Độ trễ của mô phỏng (nét liền) và mô hình (nét đứt): hàng trên kleinrock, hàng dưới kleinrock_sc](figures/mdl_predict.png){width=100%}
 
@@ -1197,7 +1197,7 @@ phần mô hình được khóa sau lần hiệu chỉnh này: không hiệu ch�
 Báo cáo trước về cùng đề tài [9] công bố routing pressure và độ trễ mô phỏng của XY, NF và OE với hai mẫu transpose ở
 PIR 0,010 và 0,014. Bảng 4.7 đặt các số này cạnh kết quả của đề tài.
 
-<!-- nguồn: results/sweep.csv, results/phi_all.txt, report/RESULTS.md, 65e1c6f -->
+<!-- nguồn: results/sweep.csv, results/phi_all.txt, report/RESULTS.md, 5074ab1 -->
 
 Table: Bảng 4.7: Routing pressure và độ trễ trung bình (chu kỳ) của đề tài so với báo cáo trước [9]
 
@@ -1229,7 +1229,7 @@ nhân cụ thể. Loại sai lệch này, chẳng hạn khung thừa byte làm t
 ngay bằng kiểm tra một gói đi 12 hop phải mất đúng 192 chu kỳ (mục 3.4.1). Hình 4.10 so độ trễ của hai quy ước NF và XY
 với các điểm của [9].
 
-<!-- nguồn: report/figures/old_reports_nf.png, 42a2883 -->
+<!-- nguồn: report/figures/old_reports_nf.png, 4131c6c -->
 
 ![Hình 4.10: Độ trễ của XY và hai quy ước NF theo PIR tuyệt đối; dấu × là số liệu của báo cáo trước [9]](figures/old_reports_nf.png){width=100%}
 
@@ -1240,7 +1240,7 @@ GNU `time`, lấy trung vị của thời gian thực và giá trị lớn nhấ
 của lần quét tải và của toàn bộ quy trình tái lập lấy từ thời gian từng bước mà `scripts/reproduce.sh` in ra. Các số này
 phụ thuộc máy nên không nằm trong phần so sánh từng byte của mục 3.5. Bảng 4.8 cho cấu hình máy và Bảng 4.9 cho kết quả.
 
-<!-- nguồn: scripts/measure_resources.sh, b244a40 -->
+<!-- nguồn: scripts/measure_resources.sh, 03e0014 -->
 
 Table: Bảng 4.8: Cấu hình máy chạy thí nghiệm
 
@@ -1252,7 +1252,7 @@ Table: Bảng 4.8: Cấu hình máy chạy thí nghiệm
 | Trình biên dịch | [ĐIỀN: phiên bản g++] |
 | ns-3 | ns-3.48, profile release (`-O3`, không `-march=native`) |
 
-<!-- nguồn: scripts/measure_resources.sh, scripts/reproduce.sh, b244a40 -->
+<!-- nguồn: scripts/measure_resources.sh, scripts/reproduce.sh, 03e0014 -->
 
 Table: Bảng 4.9: Thời gian chạy và bộ nhớ đỉnh của các tác vụ chính
 
