@@ -255,7 +255,7 @@ $$|C| = 2\,\bigl[\,W(H-1) + H(W-1)\,\bigr],$$
 nên lưới 7×7 dùng trong đề tài có 168 kênh. Đề tài chỉ xét định tuyến tối thiểu (minimal routing): mọi gói đi theo
 một đường ngắn nhất, nên số hop từ nguồn tới đích bằng khoảng cách Manhattan $|\Delta x| + |\Delta y|$.
 
-<!-- nguồn: report/figures/diag_mesh.png, scripts/diagrams.py, 5a6f060 -->
+<!-- nguồn: report/figures/diag_mesh.png, scripts/diagrams.py, 5a3b6ee -->
 
 ![Hình 2.1: Quy ước tọa độ, số hiệu nút và tên kênh trên lưới 4×4 (gốc trên-trái, y tăng về phía Nam)](figures/diag_mesh.png){width=75%}
 
@@ -317,7 +317,7 @@ rẽ còn lại vẫn ghép được thành chu trình phức tạp hơn [3].
 Cách tiếp cận cấm rẽ này gọi là turn model (mô hình rẽ). Hình 2.2 cho thấy các hướng rẽ bị cấm của từng thuật toán
 dùng trong đề tài.
 
-<!-- nguồn: report/figures/diag_turns.png, scripts/diagrams.py, noc/routing.cc, 5a6f060 -->
+<!-- nguồn: report/figures/diag_turns.png, scripts/diagrams.py, noc/routing.cc, 5a3b6ee -->
 
 ![Hình 2.2: Tám hướng rẽ trên lưới 2D và các hướng rẽ bị cấm của XY, YX, NF theo hai quy ước, OE ở cột chẵn và cột lẻ](figures/diag_turns.png){width=95%}
 
@@ -499,7 +499,7 @@ thuật toán, tọa độ nút hiện tại, nút nguồn và nút đích, rồ
 N, S. Việc chọn một cổng trong tập đó (selection) được tách thành một hàm riêng. Hình 3.1 cho thấy hai nhánh của chương
 trình cùng gọi `routeSet`: nhánh phân tích tĩnh (cây tìm kiếm, routing pressure, CDG) và nhánh mô phỏng ns-3 (router).
 
-<!-- nguồn: report/figures/diag_arch.png, scripts/diagrams.py, 5a6f060 -->
+<!-- nguồn: report/figures/diag_arch.png, scripts/diagrams.py, 5a3b6ee -->
 
 ![Hình 3.1: Kiến trúc chương trình: phân tích tĩnh và mô phỏng ns-3 cùng gọi một hàm định tuyến routeSet](figures/diag_arch.png){width=90%}
 
@@ -679,7 +679,7 @@ thời điểm có sự kiện, và bộ lập lịch `Simulator` lấy lần l�
 kết thúc truyền một khung, và một gói tới thiết bị ở nút kế tiếp. Hình 3.2 mô tả vòng đời của một gói qua các lời gọi
 hàm và sự kiện đó, cùng với trục thời gian của một lần chạy.
 
-<!-- nguồn: report/figures/diag_ns3.png, scripts/diagrams.py, 5a6f060 -->
+<!-- nguồn: report/figures/diag_ns3.png, scripts/diagrams.py, 5a3b6ee -->
 
 ![Hình 3.2: Mô hình ns-3: (a) vòng đời của một gói, (b) trục thời gian warmup, measure, drain](figures/diag_ns3.png){width=100%}
 
@@ -1167,7 +1167,7 @@ $\text{rate}(i \to c)$ lấy từ dòng `PHITURN` của bộ tính routing press
 này là một heuristic, không được suy ra chặt chẽ. Bảng 4.6 so sánh hai mô hình, và Hình 4.9 vẽ độ trễ của mô phỏng cùng hai
 mô hình.
 
-<!-- nguồn: results/mdl_predict.csv, results/saturation.csv, report/RESULTS.md, 42187f5 -->
+<!-- nguồn: results/mdl_predict.csv, results/saturation.csv, report/RESULTS.md, 65e1c6f -->
 
 Table: Bảng 4.6: So sánh hai mô hình hàng đợi với mô phỏng (pred/sim là tỉ số thời gian chờ dự đoán trên đo được)
 
@@ -1197,7 +1197,7 @@ phần mô hình được khóa sau lần hiệu chỉnh này: không hiệu ch�
 Báo cáo trước về cùng đề tài [9] công bố routing pressure và độ trễ mô phỏng của XY, NF và OE với hai mẫu transpose ở
 PIR 0,010 và 0,014. Bảng 4.7 đặt các số này cạnh kết quả của đề tài.
 
-<!-- nguồn: results/sweep.csv, results/phi_all.txt, report/RESULTS.md, 42187f5 -->
+<!-- nguồn: results/sweep.csv, results/phi_all.txt, report/RESULTS.md, 65e1c6f -->
 
 Table: Bảng 4.7: Routing pressure và độ trễ trung bình (chu kỳ) của đề tài so với báo cáo trước [9]
 
