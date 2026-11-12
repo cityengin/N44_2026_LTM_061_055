@@ -16,7 +16,7 @@ enum class Algo
     XY,
     YX,
     NF,    // âm = W, N (quy ước chính)
-    NF_WS, // âm = W, S (biến thể chẩn đoán, xem mục 4.1 của report/bao-cao.md)
+    NF_WS, // âm = W, S (biến thể chẩn đoán, xem mục 4.1 của report/bao-cao.docx)
     OE,    // Odd-Even theo Chiu (2000)
     FULL,  // fully adaptive minimal, chỉ dùng để kiểm thử (không deadlock-free)
 };

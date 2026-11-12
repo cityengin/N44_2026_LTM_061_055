@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Tái lập toàn bộ kết quả từ đầu vào một thư mục tạm, rồi so từng byte với các file đã commit.
-# KHÔNG BAO GIỜ ghi vào results/ hay report/ của repo.
+# KHÔNG BAO GIỜ ghi vào results/ của repo.
 #
 # Thứ tự: build → selftest → simcheck → phi (--channels, --turns) → example_3x3 → link_validate → sweep
-#         → analyze_sweep → mdl_predict → heatmap → diagrams → RESULTS.md → so sánh.
+#         → analyze_sweep → mdl_predict → heatmap → diagrams → so sánh.
 # Mỗi bước in thời gian chạy; dừng ngay ở bước đầu tiên fail.
-# So sánh BẮT BUỘC (quyết định exit code): mọi file trong results/ được git theo dõi và report/RESULTS.md.
-# So sánh THÔNG TIN: các hình report/figures/*.png.
+# So sánh BẮT BUỘC (quyết định exit code): mọi file trong results/ được git theo dõi.
+# Hình được vẽ lại vào thư mục tạm/figures nhưng không so sánh (không còn được commit).
 #
 # Dùng: scripts/reproduce.sh [thư_mục_tạm]
 # Exit: 0 = mọi file bắt buộc giống từng byte; 1 = một bước fail; 3 = có file khác.
@@ -19,7 +19,7 @@ PY="$REPO/.venv/bin/python"
 BIN="$NS3_DIR/build/scratch/noc/ns3.48-noc"
 OUT="${1:-$(mktemp -d "${TMPDIR:-/tmp}/noc-reproduce.XXXXXX")}"
 
-mkdir -p "$OUT/results" "$OUT/figures" "$OUT/report" "$OUT/logs"
+mkdir -p "$OUT/results" "$OUT/figures" "$OUT/logs"
 export NOC_RESULTS="$OUT/results" NOC_FIGURES="$OUT/figures"
 
 now() { date +%s.%N; }
@@ -72,7 +72,6 @@ step analyze_sweep py analyze_sweep.py
 step mdl_predict py mdl_predict.py
 step heatmap py heatmap.py
 step diagrams py diagrams.py
-step results_md py make_results_md.py --results "$NOC_RESULTS" --out "$OUT/report/RESULTS.md"
 echo "tổng thời gian:      $(elapsed "$T_ALL")s"
 
 # So sánh từng byte. In file và dòng đầu tiên khác; không ghi đè gì.
@@ -100,16 +99,10 @@ echo "# so sánh bắt buộc"
 while IFS= read -r f; do
     compare "$f" "$NOC_RESULTS/$(basename "$f")" 1
 done < <(git -C "$REPO" ls-files results/)
-compare report/RESULTS.md "$OUT/report/RESULTS.md" 1
-
-echo "# so sánh thông tin (hình)"
-while IFS= read -r f; do
-    compare "$f" "$NOC_FIGURES/$(basename "$f")" 0
-done < <(git -C "$REPO" ls-files 'report/figures/*.png')
 
 if [[ $status == 0 ]]; then
     echo "KẾT QUẢ: mọi file bắt buộc giống từng byte"
 else
-    echo "KẾT QUẢ: có file khác; results/ và report/ KHÔNG bị ghi đè (bản tạo lại ở $OUT)"
+    echo "KẾT QUẢ: có file khác; results/ KHÔNG bị ghi đè (bản tạo lại ở $OUT)"
 fi
 exit $status

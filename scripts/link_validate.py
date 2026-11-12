@@ -7,7 +7,7 @@ Output:
   results/link_validate_channels.csv   trung bình theo kênh (không commit)
   results/link_validate_summary.csv    R², slope, RMSE, max|err| cho hop và path
   results/link_validate_z.csv          z = (mean U_đo − U_pred)/(sd/√n) theo cấu hình và gộp
-  report/figures/link_validate.png     scatter U_đo theo U_hop và U_path
+  results/figures/link_validate.png     scatter U_đo theo U_hop và U_path
 """
 
 from __future__ import annotations

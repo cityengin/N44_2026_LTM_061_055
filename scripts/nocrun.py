@@ -14,7 +14,7 @@ NS3_DIR = Path(os.environ.get("NS3_DIR", Path.home() / "ns-3-dev"))
 REPO = Path(__file__).resolve().parent.parent
 # Ghi đè được bằng biến môi trường (reproduce.sh ghi vào thư mục tạm rồi so với file đã commit).
 RESULTS = Path(os.environ.get("NOC_RESULTS", REPO / "results"))
-FIGURES = Path(os.environ.get("NOC_FIGURES", REPO / "report" / "figures"))
+FIGURES = Path(os.environ.get("NOC_FIGURES", REPO / "results" / "figures"))
 
 ALGOS = ["XY", "YX", "NF", "NF_WS", "OE"]
 TRAFFICS = ["uniform", "transpose1", "transpose2"]

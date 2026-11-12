@@ -4,7 +4,7 @@ Output:
   results/sweep_summary.csv   mean ± CI 95% theo (grid, routing, traffic, pir)        (không commit)
   results/saturation.csv      điểm bão hòa theo 3 định nghĩa, tính trên lưới tương đối
   results/paired_diffs.csv    hiệu theo cặp (cùng RngRun, CRN) trên lưới tuyệt đối
-  report/figures/sweep_*.png, old_reports_nf.png
+  results/figures/sweep_*.png, old_reports_nf.png
 
 Điểm bão hòa (pir_ratio, nội suy tuyến tính giữa hai điểm lưới; NaN nếu không vượt trong 0.1..1.3):
   (i)   throughput/offered < 0.95  — dễ trễ, vì chỉ các luồng đi qua kênh cổ chai bị chặn

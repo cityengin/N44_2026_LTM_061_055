@@ -1,5 +1,4 @@
-<!-- Diễn giải kết quả của đề tài. scripts/make_results_md.py trích nguyên văn mục dưới đây vào
-     report/RESULTS.md (phần "Hạn chế và diễn giải"). Sửa ở đây, rồi chạy lại make_results_md.py. -->
+<!-- Diễn giải kết quả của đề tài (ghi chú kỹ thuật; bản trình bày đầy đủ ở chương 5 của report/bao-cao.docx). -->
 
 ## Diễn giải kết quả
 - Với mô hình store-and-forward + queue vô hạn, việc ngưỡng bão hòa bằng PIR_max gần như là hệ quả trực
@@ -14,7 +13,7 @@
   n_near_max bị lẫn với loại traffic và loại routing: nhóm 4 kênh toàn là routing tất định trên transpose,
   nhóm 12 toàn là NF/NF_WS thích ứng, nhóm 56 là uniform. Vì vậy chưa tách được tác động của số kênh
   khỏi loại traffic. OE/uniform là điểm lệch: 4 kênh nhưng gãy ở 0.950.
-  Xem report/figures/saturation_vs_nearmax.png và model ở bước 6b.
+  Xem Hình 4.8 của báo cáo và model ở bước 6b.
 - Chưa kiểm: φ khi có backpressure (wormhole, buffer hữu hạn). Khi đó nghẽn ở một kênh lan ngược về
   phía nguồn, nên ngưỡng thực có thể thấp hơn PIR_max.
 - Model giải tích (bước 6b, scripts/mdl_predict.py): xấp xỉ **Kleinrock independence + M/D/1**. Mỗi kênh

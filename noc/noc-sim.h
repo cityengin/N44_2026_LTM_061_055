@@ -1,4 +1,4 @@
-// Mô phỏng NoC trên ns-3 (quy ước mô phỏng: mục 3.3 của report/bao-cao.md).
+// Mô phỏng NoC trên ns-3 (quy ước mô phỏng: mục 3.3 của report/bao-cao.docx).
 #pragma once
 
 #include "routing.h"

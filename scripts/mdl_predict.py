@@ -15,7 +15,7 @@ không có nghiệm trước pir_ratio 1. analyze_sweep.py dùng knee_for để 
 
 Output của main:
   results/mdl_predict.csv          lat_sim / lat_pred / phần chờ theo cấu hình × pir_ratio ≤ 0.95, cả hai model
-  report/figures/mdl_predict.png   lat theo pir_ratio; hàng 1: kleinrock, hàng 2: kleinrock_sc
+  results/figures/mdl_predict.png   lat theo pir_ratio; hàng 1: kleinrock, hàng 2: kleinrock_sc
 """
 
 from __future__ import annotations

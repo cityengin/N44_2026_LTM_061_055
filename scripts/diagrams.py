@@ -1,4 +1,4 @@
-"""Bước 8: hình minh họa cho báo cáo (report/figures/diag_*.png).
+"""Bước 8: hình minh họa cho báo cáo (results/figures/diag_*.png).
 
   diag_mesh.png      lưới 4×4: id = y·W + x, hướng, kênh có hướng u→v
   diag_turns.png     8 hướng rẽ và các rẽ bị cấm của XY, YX, NF, NF (bài báo), OE cột chẵn/lẻ
@@ -236,7 +236,7 @@ def fig_arch() -> None:
     box(ax, 4.75, 1.55, 8.2, 0.75, "noc.cc: --mode = phi | selftest | sim | simcheck  →  dòng RESULT,key=value,…")
     for x in (1.1, 3.5, 7.2):
         arrow(ax, (x, 2.48), (x, 1.95))
-    box(ax, 4.75, 0.35, 8.2, 0.75, "scripts/*.py  →  results/*.csv, report/figures/*.png, report/RESULTS.md")
+    box(ax, 4.75, 0.35, 8.2, 0.75, "scripts/*.py  →  results/*.csv, results/figures/*.png")
     arrow(ax, (4.75, 1.15), (4.75, 0.75))
     box(ax, 9.65, 0.95, 1.1, 1.1, "selftest.cc\nkiểm cả hai\nnhánh", fc="white", ec=MUTED, fs=7.5)
     ax.set_xlim(-0.35, 10.3)

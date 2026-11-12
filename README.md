@@ -73,20 +73,14 @@ noc-routing-pressure/
 │   ├── mdl_predict.py           # Mô hình hàng đợi M/D/1 Kleinrock & Kleinrock SC
 │   ├── heatmap.py               # Biểu đồ nhiệt tải kênh lý thuyết vs thực tế
 │   ├── diagrams.py              # Sinh các sơ đồ kiến trúc, turn model, vòng đời gói
-│   ├── make_results_md.py       # Tự động kết xuất report/RESULTS.md từ kết quả
-│   ├── reproduce.sh             # Tái lập toàn bộ thí nghiệm từ đầu, so sánh từng byte
-│   ├── check_report.py          # Linter kiểm tra tính toàn vẹn số liệu của báo cáo
-│   └── build_report.sh          # Xuất báo cáo Pandoc từ Markdown sang Word docx
+│   ├── measure_resources.sh     # Đo thời gian chạy và bộ nhớ đỉnh của các tác vụ chính
+│   └── reproduce.sh             # Tái lập toàn bộ thí nghiệm từ đầu, so sánh từng byte
 ├── results/                     # Toàn bộ dữ liệu thực nghiệm đã kiểm chứng (CSV, TXT)
 │   ├── phi_all.txt, selftest.txt, simcheck.txt
 │   ├── link_validate_{summary, channels, z}.csv
 │   └── sweep.csv, saturation.csv, paired_diffs.csv, mdl_predict.csv
-└── report/                      # Báo cáo học thuật hoàn chỉnh
-    ├── bao-cao.docx             # Báo cáo đồ án định dạng Word
-    ├── bao-cao.md               # Bản thảo báo cáo khoa học 6 chương (~11 381 từ)
-    ├── RESULTS.md               # Bảng kiểm kê số liệu thực nghiệm độc lập
-    ├── template.docx            # Mẫu định dạng tài liệu Word (TNR 13, giãn dòng 1.5)
-    └── figures/                 # Toàn bộ 15 biểu đồ và hình vẽ minh họa
+└── report/
+    └── bao-cao.docx             # Báo cáo đồ án định dạng Word
 ```
 
 ---
@@ -164,7 +158,7 @@ Chỉ với một lệnh duy nhất, hệ thống sẽ:
 3. Chạy kiểm chứng tải kênh `link_validate.py`.
 4. Chạy quét lưới tham số `sweep.py` và phân tích `analyze_sweep.py`.
 5. Tính mô hình hàng đợi `mdl_predict.py`, vẽ biểu đồ nhiệt `heatmap.py` và sơ đồ `diagrams.py`.
-6. Sinh bảng kết quả `RESULTS.md` và so sánh từng byte với dữ liệu đã commit:
+6. So sánh từng byte các file trong `results/` với dữ liệu đã commit (hình được vẽ lại vào thư mục tạm):
 
 ```bash
 cd ~/noc-routing-pressure
@@ -175,15 +169,7 @@ cd ~/noc-routing-pressure
 
 ## 📄 Báo cáo đồ án
 
-Báo cáo học thuật chi tiết 6 chương (~11 381 từ, 15 hình vẽ, 12 bảng biểu số liệu) đã được hoàn thiện tại:
-* 📘 **File Word (.docx):** [report/bao-cao.docx](report/bao-cao.docx)
-* 📝 **File Markdown nguồn:** [report/bao-cao.md](report/bao-cao.md)
-* 📊 **Bảng kiểm kê số liệu:** [report/RESULTS.md](report/RESULTS.md)
-
-Biên dịch lại báo cáo Word từ Markdown (yêu cầu `pandoc`):
-```bash
-./scripts/build_report.sh
-```
+Báo cáo đồ án (6 chương, 15 hình, 17 bảng, 3 giải thuật) ở dạng Word: [report/bao-cao.docx](report/bao-cao.docx).
 
 ---
 
