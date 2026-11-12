@@ -1,6 +1,6 @@
 """Bước 7a: sinh report/RESULTS.md, kiểm kê mọi bảng và hình dùng trong báo cáo.
 
-Mọi con số được đọc từ file trong results/ (CSV/TXT) và CLAUDE.md, không gõ tay. Bảng copy từ CSV được
+Mọi con số được đọc từ file trong results/ (CSV/TXT) và docs/dien-giai.md, không gõ tay. Bảng copy từ CSV được
 đọc dạng chuỗi nên số giữ nguyên như trong file. Commit hash là commit gần nhất thay đổi file nguồn.
 Với cùng dữ liệu và cùng lịch sử git, file sinh ra giống hệt từng byte (reproduce.sh kiểm điều này).
 """
@@ -277,9 +277,9 @@ def tests_section(rep: Report) -> None:
 
 
 def limitations(repo: Path) -> str:
-    text = (repo / "CLAUDE.md").read_text().splitlines()
+    text = (repo / "docs" / "dien-giai.md").read_text(encoding="utf-8").splitlines()
     start = text.index("## Diễn giải kết quả")
-    end = next(i for i in range(start + 1, len(text)) if text[i].startswith("## "))
+    end = next((i for i in range(start + 1, len(text)) if text[i].startswith("## ")), len(text))
     return "\n".join(text[start + 1:end]).strip()
 
 
@@ -303,11 +303,11 @@ def main() -> int:
 
     head = ("# Kết quả: Routing Pressure trên NoC 7×7 (ns-3.48)\n\n"
             "File này được sinh bởi `scripts/make_results_md.py`; KHÔNG sửa tay. Mọi con số đọc từ file "
-            "trong `results/` (CSV/TXT) và CLAUDE.md. Tái lập toàn bộ và so từng byte với các file đã "
+            "trong `results/` (CSV/TXT) và docs/dien-giai.md. Tái lập toàn bộ và so từng byte với các file đã "
             "commit: `scripts/reproduce.sh`. Build profile release (-O3, không -march=native); RNG cố định "
             "(RngRun 1..5 cho sweep và link_validate).\n\n"
             "## Kiểm kê\n\n" + md_table(pd.DataFrame(rep.inventory)) + "\n")
-    tail = ("## Hạn chế và diễn giải\n\nTrích nguyên văn mục \"Diễn giải kết quả\" của CLAUDE.md.\n\n" +
+    tail = ("## Hạn chế và diễn giải\n\nTrích nguyên văn mục \"Diễn giải kết quả\" của docs/dien-giai.md.\n\n" +
             limitations(nocrun.REPO) + "\n")
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text("\n".join([head, *rep.parts, tail]))

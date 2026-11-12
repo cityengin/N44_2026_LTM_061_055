@@ -1,6 +1,6 @@
 # Kết quả: Routing Pressure trên NoC 7×7 (ns-3.48)
 
-File này được sinh bởi `scripts/make_results_md.py`; KHÔNG sửa tay. Mọi con số đọc từ file trong `results/` (CSV/TXT) và CLAUDE.md. Tái lập toàn bộ và so từng byte với các file đã commit: `scripts/reproduce.sh`. Build profile release (-O3, không -march=native); RNG cố định (RngRun 1..5 cho sweep và link_validate).
+File này được sinh bởi `scripts/make_results_md.py`; KHÔNG sửa tay. Mọi con số đọc từ file trong `results/` (CSV/TXT) và docs/dien-giai.md. Tái lập toàn bộ và so từng byte với các file đã commit: `scripts/reproduce.sh`. Build profile release (-O3, không -march=native); RNG cố định (RngRun 1..5 cho sweep và link_validate).
 
 ## Kiểm kê
 
@@ -270,7 +270,7 @@ simcheck (RngRun mặc định 1): failures=0.
 
 ## Hạn chế và diễn giải
 
-Trích nguyên văn mục "Diễn giải kết quả" của CLAUDE.md.
+Trích nguyên văn mục "Diễn giải kết quả" của docs/dien-giai.md.
 
 - Với mô hình store-and-forward + queue vô hạn, việc ngưỡng bão hòa bằng PIR_max gần như là hệ quả trực
   tiếp của bảo toàn lưu lượng (tải kênh = ρ_hop·PIR·16 khi router chọn đều theo hop) cộng với điều kiện
