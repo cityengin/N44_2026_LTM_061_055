@@ -2,10 +2,11 @@
 
 Lỗi:
   - hình: đường dẫn không tồn tại, hoặc file hình không có trong comment nguồn;
-  - đánh số "Hình c.k:", "Bảng c.k:", "Đoạn mã c.k:": c khác số chương chứa nó, k không liên tục từ 1,
+  - báo cáo chứa khối mã (``` hoặc ~~~): đề không cho đưa code vào báo cáo, dùng bảng hoặc mã giả;
+  - đánh số "Hình c.k:", "Bảng c.k:", "Giải thuật c.k:": c khác số chương chứa nó, k không liên tục từ 1,
     trùng nhãn; hình/bảng trong chương đánh số mà không có nhãn; heading tự gõ số (pandoc đã đánh số);
   - nhãn không được nhắc trong văn bản (ngoài caption);
-  - thiếu <!-- nguồn: f1, f2, <commit> --> ngay trước hình/bảng/đoạn mã; file hoặc commit không tồn tại;
+  - thiếu <!-- nguồn: f1, f2, <commit> --> ngay trước hình/bảng/giải thuật; file hoặc commit không tồn tại;
     file hiện tại khác bản ở commit đó (git diff <commit> -- f);
   - số thập phân (dấu phẩy; hàng nghìn tách bằng U+00A0):
       trong BẢNG: phải khớp một số trong report/RESULTS.md hoặc results/* (sau khi làm tròn tới đúng
@@ -13,14 +14,14 @@ Lỗi:
       trong VĂN BẢN: khớp như trên, HOẶC xuất hiện nguyên văn trong <!-- suy-ra: ... --> đặt ngay trước đoạn;
   - số thập phân viết bằng dấu chấm; số ≥ 5 chữ số không tách hàng nghìn bằng U+00A0;
   - trích dẫn [n] không có trong "Tài liệu tham khảo", hoặc danh mục không đánh số liên tục từ 1;
-  - dòng của đoạn mã không có trong file nguồn ở commit được ghi (dòng "..." được bỏ qua).
+  - caption "Giải thuật c.k: …" (mã giả) không có danh sách đánh số "1. …" ngay sau.
 Cảnh báo (thành lỗi khi --final): mục tài liệu không được trích, hình trong report/figures/ chưa dùng,
-nhắc tới nhãn chưa tồn tại. Cảnh báo luôn: số trang ước lượng ngoài 25–35.
+nhắc tới nhãn chưa tồn tại. Cảnh báo luôn: số trang ước lượng vượt 100 (giới hạn của đề).
 
 Phần không kiểm số: công thức ($…$, $$…$$), mã (`…`, khối ```), comment HTML, URL, mục "Tài liệu tham khảo".
 
 --expand OUT: ghi bản md cho pandoc, thay <!-- MUC-LUC --> bằng field mục lục của Word và
-<!-- DANH-MUC-HINH -->, <!-- DANH-MUC-BANG -->, <!-- DANH-MUC-DOAN-MA --> bằng danh mục lấy từ caption.
+<!-- DANH-MUC-HINH -->, <!-- DANH-MUC-BANG -->, <!-- DANH-MUC-GIAI-THUAT --> bằng danh mục lấy từ caption.
 """
 
 from __future__ import annotations
@@ -52,7 +53,7 @@ PROSE_SOURCES = ["report/RESULTS.md", "results/link_validate_summary.csv", "resu
                  "results/saturation.csv", "results/selftest.txt", "results/simcheck.txt"]
 # Nhãn, số mục và số phiên bản: không phải số thập phân, bỏ trước khi kiểm số.
 NONDECIMAL_SPANS = [
-    re.compile(r"(?:Hình|Bảng|Đoạn mã|[Mm]ục|[Cc]hương|Fig\.|Figs\.|Table|Definition|§)[ \u00a0]*"
+    re.compile(r"(?:Hình|Bảng|Giải thuật|[Mm]ục|[Cc]hương|Fig\.|Figs\.|Table|Definition|§)[ \u00a0]*"
                r"\d+(?:\.\d+)*(?:[ \u00a0]*(?:–|-|,|và|đến|hoặc)[ \u00a0]*\d+(?:\.\d+)*)*"),
     re.compile(r"ns-3\.\d+"),
     re.compile(r"(?<![\w.])\d+(?:\.\d+){2,}(?![\w.])"),  # x.y.z
@@ -65,12 +66,13 @@ DECIMAL = re.compile(r"(?<![\d,.\u00a0])(\d{1,3}(?:\u00a0\d{3})+|\d+),(\d+)(?![\
 DOT_DECIMAL = re.compile(r"(?<![\w.])\d+\.\d+(?![\w.])")
 UNGROUPED = re.compile(r"(?<![\w.,\u00a0])\d{5,}(?![\w])")
 CITE = re.compile(r"\[(\d+)\]")
-MENTION = re.compile(r"(Hình|Bảng|Đoạn mã)[ \u00a0](\d+\.\d+)")
+MENTION = re.compile(r"(Hình|Bảng|Giải thuật)[ \u00a0](\d+\.\d+)")
 NGUON = re.compile(r"<!--\s*nguồn:\s*(.+?)\s*-->", re.S)
 SUYRA = re.compile(r"<!--\s*suy-ra:\s*(.+?)\s*-->", re.S)
 FIG = re.compile(r"^!\[(Hình (\d+)\.(\d+)): (.+)\]\(([^)\s]+)\)(\{[^}]*\})?\s*$")
 TABCAP = re.compile(r"^Table: (Bảng (\d+)\.(\d+)): (.+)$")
-CODECAP = re.compile(r"^(Đoạn mã (\d+)\.(\d+)): (.+)$")
+ALGOCAP = re.compile(r"^(Giải thuật (\d+)\.(\d+)): (.+)$")
+MAX_PAGES = 100  # "Báo cáo không quá 100 trang A4"
 COMMIT = re.compile(r"^[0-9a-f]{7,40}$")
 
 
@@ -111,7 +113,8 @@ class Report:
 
 
 def git(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["git", "-C", str(REPO), *args], capture_output=True, text=True)
+    return subprocess.run(["git", "-C", str(REPO), *args], capture_output=True, text=True, encoding="utf-8",
+                          errors="replace")
 
 
 def parse_blocks(lines: list[str]) -> list[Block]:
@@ -334,7 +337,6 @@ def check(md: Path, final: bool, audit: list | None = None) -> tuple[Report, lis
     ref_entries: dict[int, int] = {}
     cites: dict[int, int] = {}
     mentions: dict[str, int] = {}
-    prev_codecap: tuple[Block, list[tuple[str, str]]] | None = None
     table_files: list[str] = []
     figures_dir = REPO / "report"
 
@@ -351,19 +353,8 @@ def check(md: Path, final: bool, audit: list | None = None) -> tuple[Report, lis
         if b.kind in ("comment", "div", "math"):
             continue
         if b.kind == "code":
-            if prev_codecap is not None:
-                cap, srcs = prev_codecap
-                body = [ln.strip() for ln in b.lines[1:-1]]
-                texts = []
-                for commit, f in srcs:
-                    r = git("show", f"{commit}:{f}")
-                    texts.append({ln.strip() for ln in r.stdout.splitlines()})
-                for off, ln in enumerate(body):
-                    if not ln or ln in ("...", "…", "// ...", "// …"):
-                        continue
-                    if not any(ln in t for t in texts):
-                        rep.err(b.line + 1 + off, f"đoạn mã: dòng không có trong nguồn: {ln[:80]}")
-                prev_codecap = None
+            rep.err(b.line, "báo cáo không được chứa khối mã (yêu cầu của đề); dùng bảng hoặc mã giả "
+                            "'Giải thuật c.k'")
             continue
         text = b.text
         if b.kind == "figure":
@@ -404,15 +395,14 @@ def check(md: Path, final: bool, audit: list | None = None) -> tuple[Report, lis
             check_numbers(b, text, strict=True, files=table_files if prev and prev.kind == "tabcap" else [])
             continue
         # text
-        m = CODECAP.match(text.strip())
+        m = ALGOCAP.match(text.strip())
         if m:
             name = m.group(1)
-            add_label(b, "Đoạn mã", name, int(m.group(2)), int(m.group(3)), m.group(4))
-            srcs = check_nguon(b, name)
-            prev_codecap = (b, srcs)
+            add_label(b, "Giải thuật", name, int(m.group(2)), int(m.group(3)), m.group(4))
+            check_nguon(b, name)
             nxt = next((x for x in blocks[idx + 1:] if x.kind != "div"), None)
-            if nxt is None or nxt.kind != "code":
-                rep.err(b.line, f"{name}: ngay sau caption phải là khối mã")
+            if nxt is None or nxt.kind != "text" or not re.match(r"^1\.\s", nxt.lines[0].lstrip()):
+                rep.err(b.line, f"{name}: ngay sau caption phải là danh sách đánh số '1. …' (mã giả)")
             continue
         if in_refs:
             mm = re.match(r"^\[(\d+)\]\s", text)
@@ -462,11 +452,10 @@ def estimate_pages(blocks: list[Block], n_labels: int = 0) -> tuple[int, float]:
     pages = words / 480  # khổ chữ 16 cm: ~30 dòng × ~16 từ
     pages += 0.5 * sum(b.kind == "figure" for b in blocks)
     pages += sum(0.045 * len(b.lines) + 0.15 for b in blocks if b.kind == "table")
-    pages += sum(0.018 * len(b.lines) + 0.1 for b in blocks if b.kind == "code")  # cỡ 9,5, cách dòng đơn
     pages += sum(0.08 for b in blocks if b.kind == "heading")
     # Mỗi heading cấp 1 sang trang mới: trung bình bỏ trống nửa trang.
     pages += 0.5 * sum(b.kind == "heading" and b.lines[0].startswith("# ") for b in blocks)
-    pages += 1.0 + 2.0 + 0.03 * n_labels  # bìa, mục lục (field), danh mục hình/bảng/đoạn mã
+    pages += 1.0 + 2.0 + 0.03 * n_labels  # bìa, mục lục (field), danh mục hình/bảng/giải thuật
     return words, pages
 
 
@@ -490,7 +479,7 @@ def expand(md: Path, labels: list[Label], out: Path) -> None:
     text = text.replace("<!-- MUC-LUC -->", TOC_XML)
     text = text.replace("<!-- DANH-MUC-HINH -->", listing("Hình"))
     text = text.replace("<!-- DANH-MUC-BANG -->", listing("Bảng"))
-    text = text.replace("<!-- DANH-MUC-DOAN-MA -->", listing("Đoạn mã"))
+    text = text.replace("<!-- DANH-MUC-GIAI-THUAT -->", listing("Giải thuật"))
     out.write_text(text, encoding="utf-8")
 
 
@@ -511,11 +500,11 @@ def main() -> int:
         print(f"CẢNH BÁO {w}")
     for e in rep.errors:
         print(f"LỖI {e}")
-    kinds = {k: sum(lb.kind == k for lb in labels) for k in ("Hình", "Bảng", "Đoạn mã")}
-    print(f"# {md.name}: {words} từ, {kinds['Hình']} hình, {kinds['Bảng']} bảng, {kinds['Đoạn mã']} đoạn mã, "
+    kinds = {k: sum(lb.kind == k for lb in labels) for k in ("Hình", "Bảng", "Giải thuật")}
+    print(f"# {md.name}: {words} từ, {kinds['Hình']} hình, {kinds['Bảng']} bảng, {kinds['Giải thuật']} giải thuật, "
           f"ước lượng ≈ {pages:.0f} trang; {len(rep.errors)} lỗi, {len(rep.warnings)} cảnh báo")
-    if not 25 <= pages <= 35:
-        print(f"CẢNH BÁO số trang ước lượng {pages:.0f} nằm ngoài khoảng 25–35")
+    if pages > MAX_PAGES:
+        print(f"CẢNH BÁO số trang ước lượng {pages:.0f} vượt {MAX_PAGES}")
     if rep.errors:
         return 1
     if args.expand:
